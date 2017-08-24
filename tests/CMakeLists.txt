@@ -54,7 +54,7 @@ ENABLE_IF_SUPPORTED( CMAKE_CXX_FLAGS "-pedantic" )
 
 # FIXME: Ugly hack to make generic lambdas work
 SET_SOURCE_FILES_PROPERTIES(
-  test_bootstrap.cc
+  test_bootstrap.cc test_persistence_landscape.cc
   PROPERTIES COMPILE_FLAGS "-std=c++14"
 )
 
@@ -98,6 +98,7 @@ ADD_EXECUTABLE( test_rips_skeleton                    test_rips_skeleton.cc )
 ADD_EXECUTABLE( test_union_find                       test_union_find.cc )
 ADD_EXECUTABLE( test_step_function                    test_step_function.cc )
 ADD_EXECUTABLE( test_witness_complex                  test_witness_complex.cc )
+ADD_EXECUTABLE( test_persistence_landscape            test_persistence_landscape.cc )
 
 ADD_TEST( barycentric_subdivision          test_barycentric_subdivision )
 ADD_TEST( bootstrap                        test_bootstrap )
@@ -134,6 +135,7 @@ ADD_TEST( nearest_neighbours               test_nearest_neighbours )
 ADD_TEST( persistence_diagrams             test_persistence_diagrams )
 ADD_TEST( persistent_homology_complete     test_persistent_homology_complete )
 ADD_TEST( persistent_intersection_homology test_persistent_intersection_homology )
+ADD_TEST( persistence_landscape            test_persistence_landscape )
 ADD_TEST( principal_component_analysis     test_principal_component_analysis )
 ADD_TEST( point_clouds                     test_point_clouds )
 ADD_TEST( rips_expansion                   test_rips_expansion )
