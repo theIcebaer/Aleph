@@ -116,12 +116,21 @@ private:
 
       std::vector<T> tmp = {};
       std::vector<T> X_i = landscape.getX()[k];
-      std::merge(X.begin(), X.end(), X_i.begin(), X_i.end(), std::back_inserter(tmp) );
+      std::merge(X.begin(), X.end(), X_i.begin(), X_i.end(), std::back_inserter(tmp));
       X = tmp;
+      for (auto x : X)
+      { std::cout << x << " ";}
+      std::cout << std::endl;
     }
     // erase duplicates
-    std::unique(X.begin(), X.end(), [](const double& a, const double& b) { return a == b; } );
+    auto last = std::unique(X.begin(), X.end() /*, [](const double& a, const double& b) { return a == b; }*/ );
+    X.erase(last, X.end());
     // calculate stuff
+    std::cout << "erased: " << std::endl;
+    for (auto x : X)
+      { std::cout << x << " ";}
+      std::cout << std::endl;
+    std::cout << std::endl;
     std::vector<std::vector<R> > Y_;
     for (size_t j = 0; j < N; j++)
     {
