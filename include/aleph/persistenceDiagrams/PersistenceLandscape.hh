@@ -87,32 +87,33 @@ private:
   const static T Infinity;// = std::numeric_limits<T>::infinity();
   const static T minusInfinity;// = -std::numeric_limits<T>::infinity();
   
-  static PersistenceLandscape<T,R,S> linComb (std::vector<PersistenceLandscape<T,R,S>> landscapeV, std::vector<S> scalarV)
+  static PersistenceLandscape<T,R,S> linComb (std::vector<PersistenceLandscape<T,R,S>> landscapeV_, std::vector<S> scalarV)
   {
-    size_t layerN = landscapeV[0].layer();
-    std::vector<std::vector<T>> X;
-    std::vector<std::vector<R>> Y;
+    size_t layerN = landscapeV_[0].layer();
+    std::vector<std::vector<T>> X_ = {};
+    std::vector<std::vector<R>> Y_ = {};
+    // std::cout<< "check 2" << std::endl;
     for(size_t k = 0; k < layerN; k++)
     {
-      std::vector<std::pair< std::vector<T>, std::vector<R> >> inputV;
-      for (auto landscape : landscapeV)
-      {
-        assert (landscape.layer() == layerN);
+      //std::vector<std::pair< std::vector<T>, std::vector<R> >> inputV;
+        //assert (landscapeV_[].layer() == layerN);
         //inputV.push_back(std::pair< std::vector<T>, std::vector<R> >(landscape.getX()[k], landscape.getY()[k]) );
-        auto result = linComb_singleLayer(landscapeV, scalarV, k);
-        X.push_back(result.first);
-        Y.push_back(result.second);
-      }
+        auto result = linComb_singleLayer(landscapeV_, scalarV, k);
+        X_.push_back(result.first);
+        Y_.push_back(result.second);
     }
-    return PersistenceLandscape<T,R,S>(X, Y);
+    return PersistenceLandscape<T,R,S>(X_, Y_);
   }
   static std::pair<std::vector<T>, std::vector<R> > linComb_singleLayer ( const std::vector<PersistenceLandscape<T,R,S>>& landscapeV, const std::vector<S>& a,const size_t k)
   {
+    size_t layerN = landscapeV[0].layer();
     size_t N = landscapeV.size();
     // merge the vectors evtl. with std::accumulate TODO: capsule this in a structure
     std::vector<T> X;
     for (auto landscape : landscapeV)
     {
+      assert (landscape.layer() == layerN);
+
       std::vector<T> tmp = {};
       std::vector<T> X_i = landscape.getX()[k];
       std::merge(X.begin(), X.end(), X_i.begin(), X_i.end(), std::back_inserter(tmp) );
@@ -147,8 +148,9 @@ public:
   // constructors:
   PersistenceLandscape (std::deque<Interval<T>> A); // Constructor by birth-death pairs
   PersistenceLandscape (std::vector<std::vector<T>>, std::vector<std::vector<R>>); // Constructor by already claculated critical points
+  PersistenceLandscape (const PersistenceLandscape& other);
   
-  // evaluation operator
+  PersistenceLandscape& operator= (const PersistenceLandscape& other);
   ReturnType operator() (size_t k, ArgumentType t) const;
   LandscapeLayer operator[] (size_t k);
   
@@ -157,24 +159,19 @@ public:
   PersistenceLandscape operator+ (const PersistenceLandscape& other) const;
   PersistenceLandscape& operator*= (const ScalarType& scalar);
   PersistenceLandscape operator* (const ScalarType& scalar) const;
+  
   // PersistenceLandscape& operator/= (const ScalarType& scalar); // erst wenn es einen anwendungsfall gibt
   // PersistenceLandscape operator/ (const ScalarType& scalar) const;
   
   // non operator functionalities
   ScalarType norm(size_t p) const; // schoener als eigene Klasse mit template p und argument lambda?
+  ReturnType integral (size_t k, size_t p) const;
+  ReturnType integral (size_t p) const;
+  ReturnType integral (T lower, T upper) const;
   std::vector<std::vector<T> > getX() const; // maybe it should return a reference?
   std::vector<std::vector<T> > getY() const; // s.o.
   size_t layer() const;
 };
-
-#endif // PERSISTNCE_LANDSCAPE_H_
-
-
-
-#ifndef PERSISTNCE_LANDSCAPE_IMP_H_
-#define PERSISTNCE_LANDSCAPE_IMP_H_
-
-//#include "pl.hh"
 
 
 template <typename T, typename R, typename S> 
@@ -186,6 +183,14 @@ constexpr T PersistenceLandscape<T,R,S>::minusInfinity = -std::numeric_limits<T>
 template <typename T, typename R, typename S>
 PersistenceLandscape<T,R,S>::PersistenceLandscape(std::vector<std::vector<T>> X_, std::vector<std::vector<R>> Y_) : X(X_), Y(Y_)
 {}
+
+template <typename T, typename R, typename S>
+PersistenceLandscape<T,R,S>::PersistenceLandscape(const PersistenceLandscape& other)
+{
+  this->X = other.getX();
+  this->Y = other.getY();
+}
+
 
 template <typename T, typename R, typename S>
 PersistenceLandscape<T,R,S>::PersistenceLandscape(std::deque<Interval<T>> A) 
@@ -276,11 +281,19 @@ PersistenceLandscape<T,R,S>::PersistenceLandscape(std::deque<Interval<T>> A)
 }
 
 template <typename T, typename R, typename S>
+PersistenceLandscape<T,R,S>& PersistenceLandscape<T,R,S>::operator= (const PersistenceLandscape& other)
+{
+  this->X = other.getX();
+  this->Y = other.getY();
+  return *this;
+}
+
+template <typename T, typename R, typename S>
 R PersistenceLandscape<T,R,S>::operator() (size_t k, T t) const
 {
   auto xIter = std::lower_bound(X[k].begin(), X[k].end(), t);
   if (*xIter == Infinity) {return 0;}
-  else if( *xIter == X[k][1]) { return 0;}
+  else if( *xIter <= X[k][1]) { return 0;}
   size_t index = xIter - X[k].begin();
   // linear interpolation
   double m = (Y[k][index] - Y[k][index - 1]) / (X[k][index] - X[k][index - 1]); // TODO: catch 0 division
@@ -329,6 +342,45 @@ PersistenceLandscape<T,R,S>& PersistenceLandscape<T,R,S>::operator*= (const S& s
 }
 
 template <typename T, typename R, typename S>
+R PersistenceLandscape<T,R,S>::integral (size_t k,size_t p) const
+{
+  R surface;
+  for (size_t i = 2; i < X.size(); i++)
+  {
+    // steigung
+    R a = (Y[k][i]-Y[k][i-1]) / (X[k][i]-X[k][i]); 
+    // y-achsenabschnitt
+    R b = Y[i] - (a * X[i]);
+    if ( a != 0) //besser Y[k][i] == Y[k][i-1] ?
+    {
+      surface += 1/(a * p + 1.0) * ( pow( (a*X[i] + b) , p + 1 ) - pow( (a*X[i-1] + b), p + 1) ); 
+      //TODO: klären ob es nicht ein integral für positive Komponenten und eines für negative geben müsste.
+    }
+    else 
+    {
+      surface += (X[i] - X[i-1]) * pow( Y[i], p ); 
+    } // explanation insert
+  }
+  return surface;
+}
+
+template <typename T, typename R, typename S>
+R PersistenceLandscape<T,R,S>::integral (size_t p) const
+{
+  R surface = R(0); // does this work??
+  for (size_t k = 0; k < X.size(); k++)
+  {
+    surface += integral(k, p);
+  }
+  return surface;
+}
+
+template <typename T, typename R, typename S>
+R PersistenceLandscape<T,R,S>::integral (T lower, T upper) const
+{
+  throw;
+}
+template <typename T, typename R, typename S>
 std::vector<std::vector<T> > PersistenceLandscape<T,R,S>::getX() const
 {
   return this->X;
@@ -341,10 +393,19 @@ std::vector<std::vector<T> > PersistenceLandscape<T,R,S>::getY() const
 }
 
 template <typename T, typename R, typename S>
+PersistenceLandscape<T,R,S> operator* (const S& scalar, const PersistenceLandscape<T,R,S>& landscape)
+{
+  return landscape * scalar;
+}
+
+
+
+template <typename T, typename R, typename S>
 size_t PersistenceLandscape<T,R,S>::layer() const
 {
-  assert(X.size() == Y.size());
-  return X.size();
+  //std::cout << "check 3" << std::endl;
+  assert(this->X.size() == this->Y.size());
+  return this->X.size();
 }
 
 template <typename T, typename R, typename S>
@@ -352,19 +413,23 @@ PersistenceLandscape<T,R,S>::LandscapeLayer::LandscapeLayer(PersistenceLandscape
 {}
 
 template <typename T, typename R, typename S>
-R PersistenceLandscape<T,R,S>::LandscapeLayer::operator() ( T t)
+R __attribute__((optimize("O0"))) PersistenceLandscape<T,R,S>::LandscapeLayer::operator() ( T t)
 {
   auto xIter = std::lower_bound(outer.X[k].begin(), outer.X[k].end(), t);
-  if (*xIter == Infinity) {return 0;}
-  else if( *xIter == outer.X[k][1]) { return 0;}
+  if (*xIter == Infinity) {return 0;} // t > last crit point
+  else if( *xIter == outer.X[k][0]) { return 0; }
+  else if( *xIter == outer.X[k][1]) { return 0;} 
   size_t index = xIter - outer.X[k].begin();
   // linear interpolation
-  double m = (outer.Y[k][index] - outer.Y[k][index - 1]) / (outer.X[k][index] - outer.X[k][index - 1]); // TODO: catch 0 division
+  double m = (outer.Y[k][index] - outer.Y[k][index - 1]) / (outer.X[k][index] - outer.X[k][index - 1]); 
+  // TODO: catch 0 division, doesnt happen does it?
   return (outer.Y[k][index] - (m * (outer.X[k][index] - t) )); 
 }
 
+
 /* 
- * TODO: landscape layer 
+ * TODO: 
+ * landscape layer 
  *  - operator+ (landscape layer)
  *  - operator- (landscape layer)
  *  - operator+ (landscape)
@@ -375,63 +440,6 @@ R PersistenceLandscape<T,R,S>::LandscapeLayer::operator() ( T t)
 
 //template <typename T, typename R, typename S>
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-/* The first Problem in the term to evaluate the piecewise linear 
- * PersistenceLandscape on certain intervals is to determine the correct
- * interval containing the ipnput t. Since we chose a 
- * boost::icl::split_interval_set to store the interval we can use the inbuild
- * find() function of boost::icl what leads us to use the tree structure of 
- * the set data type to optane O(log(n)) complexity, where n is the number of 
- * given intervals. There might be posibillities to optimize this prozess
- * but for a first practical approach this should be the way to go.
- * 
- * Optimization ideas are:
- * - use bucket/rainbowtable -like lookups to cut the range of intervals
- *   we have to serach
- * - use interpolation methods to calculate only one function to evaluate
- *   instead of the many picewise linear ones
- * 
- * Since this might be interesting for use cases in which the evaluation of
- * the PersistenceLandscape becomes the main bottleneck, it is very much work
- * for cases in which it isn't so we won't optimize more than required at
- * this point.
- */
-
-
-/*
-template <typename T, R>
-class Functor {
-
-public:
-  using ArgumentType = T;
-  using ReturnType = R;
-  
-  virtual ReturnType operator() (ArgumentType x) const;
-}*/
 }
 
 #endif // PERSISTNCE_LANDSCAPE_IMP_H_
