@@ -35,6 +35,13 @@ void testPersistenceLandscape()
                                                          { 0.0, 0.0, 1.5, 0.0, 1.5, 0.0, 0.0 },
                                                          { 0.0, 0.0, 0.5, 0.0, 0.0, 0.5, 0.0, 0.0 }} ) );
   
+  assert( l2.getX() == std::vector<std::vector<double>>({{-inf, 1.0, 3.5, 4.5, 5.0, 7.0, inf}, 
+                                                         {-inf, 2.0, 2.5, 3.0, 4.5, 6.0, inf},
+                                                         {-inf, 4.0, 4.5, 5.0, inf}} ) );
+  assert( l2.getY() == std::vector<std::vector<double>>({{ 0.0, 0.0, 2.5, 1.5, 2.0, 0.0, 0.0 }, 
+                                                         { 0.0, 0.0, 0.5, 0.0, 1.5, 0.0, 0.0 },
+                                                         { 0.0, 0.0, 0.5, 0.0, 0.0 }} ) );
+  
 
   assert( l1(0,0.0) == 0); // test x-value smaller than first critical point
   assert( l1(0,1.0) == 0); // test x-value at first critical point
@@ -87,18 +94,28 @@ void testPersistenceLandscape()
                                                          { 0.0, 0.0, 3.0, 0.0, 3.0, 0.0, 0.0 },
                                                          { 0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 0.0 }} ) );
   l3 = l1 + l2;
-  assert( l3.getX() == std::vector<std::vector<double>>({{-inf, 1.0, 3.0, 3.5, 5.0, 6.5, 7.0, 9.0, 9.5, 10, inf}, 
-                                                         {-inf, 2.0, 3.5, 5.0, 6.5, 8.0, inf},
-                                                         {-inf, 3.0, 3.5, 4.0, 6.0, 6.5, 7.0, inf}} ) );
-  assert( l3.getY() == std::vector<std::vector<double>>({{ 0.0, 0.0, 4.0, 3.0, 6.0, 3.0, 4.0, 0.0, 1.0, 0, 0.0 }, 
-                                                         { 0.0, 0.0, 3.0, 0.0, 3.0, 0.0, 0.0 },
-                                                         { 0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 0.0 }} ) );
+  assert( l3.getX() == std::vector<std::vector<double>>({{-inf, 1.0, 3.0, 3.5, 4.5, 5.0, 6.5, 7.0, 9.0, 9.5, 10, inf}, 
+                                                         {-inf, 2.0, 2.5, 3.0, 3.5, 4.5, 5.0, 6.0, 6.5, 8.0, inf},
+                                                         {-inf, 3.0, 3.5, 4.0, 4.5, 5.0, 6.0, 6.5, 7.0, inf}} ) );
+  assert( l3.getY() == std::vector<std::vector<double>>({{0, 0, 4, 4, 4, 5, 2, 2, 0, 0.5, 0, 0}, 
+                                                         {0, 0, 1, 1, 2, 2, 1, 1, 1.5, 0, 0},
+                                                         {0, 0, 0.5, 0, 0.5, 0, 0, 0.5, 0, 0}} ) );
+  
+  //{ std::vector of length 12, capacity 12 = {0, 0, 4, 4, 4, 5, 2, 2, 0, 0.5, 0, 0}, 
+  //  std::vector of length 11, capacity 11 = {0, 0, 1, 1, 2, 2, 1, 1, 1.5, 0, 0}, 
+  //  std::vector of length 10, capacity 10 = {0, 0, 0.5, 0, 0.5, 0, 0, 0.5, 0, 0}}
   
   // TODO: ergebnisse ausrechnen und korrekte asserts einfügen 
-  l1 + l2;
-  l1 * 3.0;
+  assert(l1 == l1);
+  assert(l2 == l2);
+  assert(l3 == l3);
+  
   l2 += l1;
+  assert(l2 == l3);
+  
+  l3 = l2 * 3.0;
   l2 *= 3.0;
+  assert(l2 == l3);
   
   
   

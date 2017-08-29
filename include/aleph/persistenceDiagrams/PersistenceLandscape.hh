@@ -163,6 +163,8 @@ public:
   ReturnType operator() (size_t k, ArgumentType t) const;
   LandscapeLayer operator[] (size_t k);
   
+  bool operator== (const PersistenceLandscape& other) const;
+  
   // calculation operators
   PersistenceLandscape& operator+= (const PersistenceLandscape& other);
   PersistenceLandscape operator+ (const PersistenceLandscape& other) const;
@@ -313,6 +315,12 @@ template <typename T, typename R, typename S>
 typename PersistenceLandscape<T,R,S>::LandscapeLayer PersistenceLandscape<T,R,S>::operator[] (size_t k ) // maybe return reference here?
 {
   return LandscapeLayer(*this, k); // is it better or worse to construct the matching Layer object here?
+}
+
+template <typename T, typename R, typename S>
+bool PersistenceLandscape<T,R,S>::operator== (const PersistenceLandscape& other) const
+{
+  return (this->X == other.getX() && this->Y == other.getY() );
 }
 
 // unterstützt derzeit nur Landscapes auf den selben typen. TODO: unterschiedliche Typen ermöglichen.
