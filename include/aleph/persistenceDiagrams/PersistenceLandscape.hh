@@ -2,7 +2,9 @@
 #define PERSISTNCELANDSCAPE_H_
 
 #include <iostream>
+#include <fstream>
 #include <algorithm>
+#include <numeric>
 #include <functional>
 #include <limits>
 #include <cmath>
@@ -10,11 +12,12 @@
 #include <deque>
 #include <boost/icl/continuous_interval.hpp>
 #include <aleph/utilities/ContainerOperators.hh>
+#include <aleph/persistenceDiagrams/PersistenceDiagram.hh>
 
 
 // TODO: skalierungsinvarianz einbauen
 
-namespace pl
+namespace aleph
 {
 // typedefs
 template<typename T = double, typename R = double>
@@ -87,8 +90,53 @@ private:
   const static T Infinity;// = std::numeric_limits<T>::infinity();
   const static T minusInfinity;// = -std::numeric_limits<T>::infinity();
   
-  static PersistenceLandscape<T,R,S> linComb (std::vector<PersistenceLandscape<T,R,S>> landscapeV_, std::vector<S> scalarV)
-  {
+  static PersistenceLandscape<T,R,S> linComb (std::vector<PersistenceLandscape<T,R,S>> landscapeV_, std::vector<S> scalarV);
+  
+  static std::pair<std::vector<T>, std::vector<R> > linComb_singleLayer ( const std::vector<PersistenceLandscape<T,R,S>>& landscapeV, const std::vector<S>& a,const size_t k);
+  
+public:
+  // constructors:
+  PersistenceLandscape (std::deque<Interval<T>> A); // Constructor by birth-death pairs
+  PersistenceLandscape (const aleph::PersistenceDiagram<T>& diag);
+  PersistenceLandscape (std::vector<std::vector<T>>, std::vector<std::vector<R>>); // Constructor by already claculated critical points
+  PersistenceLandscape (const PersistenceLandscape& other);
+  
+  PersistenceLandscape& operator= (const PersistenceLandscape& other);
+  ReturnType operator() (size_t k, ArgumentType t) const;
+  LandscapeLayer operator[] (size_t k);
+  
+  bool operator== (const PersistenceLandscape& other) const;
+  
+  // calculation operators
+  PersistenceLandscape& operator+= (const PersistenceLandscape& other);
+  PersistenceLandscape operator+ (const PersistenceLandscape& other) const;
+  PersistenceLandscape& operator*= (const ScalarType& scalar);
+  PersistenceLandscape operator* (const ScalarType& scalar) const;
+  
+  // PersistenceLandscape& operator/= (const ScalarType& scalar); // erst wenn es einen anwendungsfall gibt
+  // PersistenceLandscape operator/ (const ScalarType& scalar) const;
+  
+  // non operator functionalities
+  R norm(double p) const; // schoener als eigene Klasse mit template p und argument lambda?
+  ReturnType integral (size_t k, double p) const;
+  //ReturnType integral (size_t p) const;
+  ReturnType integral (T lower, T upper) const;
+  std::vector<std::vector<T> > getX() const; // maybe it should return a reference?
+  std::vector<std::vector<T> > getY() const; // s.o.
+  size_t layer() const;
+  void fileOutput(std::string filename) const;
+};
+
+
+template <typename T, typename R, typename S> 
+constexpr T PersistenceLandscape<T,R,S>::Infinity = std::numeric_limits<T>::infinity();
+
+template <typename T, typename R, typename S> 
+constexpr T PersistenceLandscape<T,R,S>::minusInfinity = -std::numeric_limits<T>::infinity();
+
+template <typename T, typename R, typename S> 
+PersistenceLandscape<T,R,S> PersistenceLandscape<T,R,S>::linComb (std::vector<PersistenceLandscape<T,R,S>> landscapeV_, std::vector<S> scalarV)
+{
     size_t layerN = landscapeV_[0].layer();
     std::vector<std::vector<T>> X_ = {};
     std::vector<std::vector<R>> Y_ = {};
@@ -103,9 +151,11 @@ private:
         Y_.push_back(result.second);
     }
     return PersistenceLandscape<T,R,S>(X_, Y_);
-  }
-  static std::pair<std::vector<T>, std::vector<R> > linComb_singleLayer ( const std::vector<PersistenceLandscape<T,R,S>>& landscapeV, const std::vector<S>& a,const size_t k)
-  {
+}
+
+template <typename T, typename R, typename S>
+std::pair<std::vector<T>, std::vector<R> > PersistenceLandscape<T,R,S>::linComb_singleLayer ( const std::vector<PersistenceLandscape<T,R,S>>& landscapeV, const std::vector<S>& a,const size_t k)
+{
     size_t layerN = landscapeV[0].layer();
     size_t N = landscapeV.size();
     // merge the vectors evtl. with std::accumulate TODO: capsule this in a structure
@@ -118,19 +168,19 @@ private:
       std::vector<T> X_i = landscape.getX()[k];
       std::merge(X.begin(), X.end(), X_i.begin(), X_i.end(), std::back_inserter(tmp));
       X = tmp;
-      for (auto x : X)
-      { std::cout << x << " ";}
-      std::cout << std::endl;
+    //  for (auto x : X)
+    //  { std::cout << x << " ";}
+    //  std::cout << std::endl;
     }
     // erase duplicates
     auto last = std::unique(X.begin(), X.end() /*, [](const double& a, const double& b) { return a == b; }*/ );
     X.erase(last, X.end());
     // calculate stuff
-    std::cout << "erased: " << std::endl;
-    for (auto x : X)
-      { std::cout << x << " ";}
-      std::cout << std::endl;
-    std::cout << std::endl;
+  //  std::cout << "erased: " << std::endl;
+  //  for (auto x : X)
+  //    { std::cout << x << " ";}
+  //    std::cout << std::endl;
+  //  std::cout << std::endl;
     std::vector<std::vector<R> > Y_;
     for (size_t j = 0; j < N; j++)
     {
@@ -152,44 +202,7 @@ private:
     }
     
     return std::make_pair(X,Y);
-  }  
-public:
-  // constructors:
-  PersistenceLandscape (std::deque<Interval<T>> A); // Constructor by birth-death pairs
-  PersistenceLandscape (std::vector<std::vector<T>>, std::vector<std::vector<R>>); // Constructor by already claculated critical points
-  PersistenceLandscape (const PersistenceLandscape& other);
-  
-  PersistenceLandscape& operator= (const PersistenceLandscape& other);
-  ReturnType operator() (size_t k, ArgumentType t) const;
-  LandscapeLayer operator[] (size_t k);
-  
-  bool operator== (const PersistenceLandscape& other) const;
-  
-  // calculation operators
-  PersistenceLandscape& operator+= (const PersistenceLandscape& other);
-  PersistenceLandscape operator+ (const PersistenceLandscape& other) const;
-  PersistenceLandscape& operator*= (const ScalarType& scalar);
-  PersistenceLandscape operator* (const ScalarType& scalar) const;
-  
-  // PersistenceLandscape& operator/= (const ScalarType& scalar); // erst wenn es einen anwendungsfall gibt
-  // PersistenceLandscape operator/ (const ScalarType& scalar) const;
-  
-  // non operator functionalities
-  ScalarType norm(size_t p) const; // schoener als eigene Klasse mit template p und argument lambda?
-  ReturnType integral (size_t k, size_t p) const;
-  ReturnType integral (size_t p) const;
-  ReturnType integral (T lower, T upper) const;
-  std::vector<std::vector<T> > getX() const; // maybe it should return a reference?
-  std::vector<std::vector<T> > getY() const; // s.o.
-  size_t layer() const;
-};
-
-
-template <typename T, typename R, typename S> 
-constexpr T PersistenceLandscape<T,R,S>::Infinity = std::numeric_limits<T>::infinity();
-
-template <typename T, typename R, typename S> 
-constexpr T PersistenceLandscape<T,R,S>::minusInfinity = -std::numeric_limits<T>::infinity();
+}  
 
 template <typename T, typename R, typename S>
 PersistenceLandscape<T,R,S>::PersistenceLandscape(std::vector<std::vector<T>> X_, std::vector<std::vector<R>> Y_) : X(X_), Y(Y_)
@@ -292,6 +305,17 @@ PersistenceLandscape<T,R,S>::PersistenceLandscape(std::deque<Interval<T>> A)
 }
 
 template <typename T, typename R, typename S>
+PersistenceLandscape<T,R,S>::PersistenceLandscape( const aleph::PersistenceDiagram<T>& diag)
+{
+  std::deque<Interval<T>> queue = {};
+  for( auto point : diag)
+  {
+    queue.push_back( Interval<T>(point.x(), point.y()) );
+  }
+  *this = PersistenceLandscape(queue);
+}
+
+template <typename T, typename R, typename S>
 PersistenceLandscape<T,R,S>& PersistenceLandscape<T,R,S>::operator= (const PersistenceLandscape& other)
 {
   this->X = other.getX();
@@ -359,30 +383,32 @@ PersistenceLandscape<T,R,S>& PersistenceLandscape<T,R,S>::operator*= (const S& s
 }
 
 template <typename T, typename R, typename S>
-R PersistenceLandscape<T,R,S>::integral (size_t k,size_t p) const
+R PersistenceLandscape<T,R,S>::integral (size_t k,double p) const
 {
-  R surface;
-  for (size_t i = 2; i < X.size(); i++)
+  using aleph::utilities::operator*;
+  using aleph::utilities::operator+=;
+  R surface(0);
+  for (size_t i = 2; i < X[k].size()-1; i++)
   {
     // steigung
-    R a = (Y[k][i]-Y[k][i-1]) / (X[k][i]-X[k][i]); 
+    R a = (Y[k][i]-Y[k][i-1]) / (X[k][i]-X[k][i-1]); 
     // y-achsenabschnitt
-    R b = Y[i] - (a * X[i]);
+    R b = Y[k][i] - (a * X[k][i]);
     if ( a != 0) //besser Y[k][i] == Y[k][i-1] ?
     {
-      surface += 1/(a * p + 1.0) * ( pow( (a*X[i] + b) , p + 1 ) - pow( (a*X[i-1] + b), p + 1) ); 
+      surface += 1/(a * (p + 1.0)) * ( pow( (a*X[k][i] + b) , p + 1 ) - pow( (a*X[k][i-1] + b), p + 1) ); 
       //TODO: klären ob es nicht ein integral für positive Komponenten und eines für negative geben müsste.
     }
     else 
     {
-      surface += (X[i] - X[i-1]) * pow( Y[i], p ); 
+      surface += (X[k][i] - X[k][i-1]) * pow( Y[k][i], p ); 
     } // explanation insert
   }
   return surface;
 }
 
 template <typename T, typename R, typename S>
-R PersistenceLandscape<T,R,S>::integral (size_t p) const
+R PersistenceLandscape<T,R,S>::norm (double p) const
 {
   R surface = R(0); // does this work??
   for (size_t k = 0; k < X.size(); k++)
@@ -430,7 +456,7 @@ PersistenceLandscape<T,R,S>::LandscapeLayer::LandscapeLayer(PersistenceLandscape
 {}
 
 template <typename T, typename R, typename S>
-R __attribute__((optimize("O0"))) PersistenceLandscape<T,R,S>::LandscapeLayer::operator() ( T t)
+R /*__attribute__((optimize("O0")))*/ PersistenceLandscape<T,R,S>::LandscapeLayer::operator() ( T t)
 {
   auto xIter = std::lower_bound(outer.X[k].begin(), outer.X[k].end(), t);
   if (*xIter == Infinity) {return 0;} // t > last crit point
@@ -443,20 +469,40 @@ R __attribute__((optimize("O0"))) PersistenceLandscape<T,R,S>::LandscapeLayer::o
   return (outer.Y[k][index] - (m * (outer.X[k][index] - t) )); 
 }
 
-
-/* 
- * TODO: 
- * landscape layer 
- *  - operator+ (landscape layer)
- *  - operator- (landscape layer)
- *  - operator+ (landscape)
- * persistence landscape
- *  - operator- (landscape)
- *  - operator+ (landscape layer)
- */
-
-//template <typename T, typename R, typename S>
-
+template <typename T, typename R, typename S>
+void PersistenceLandscape<T,R,S>::fileOutput (std::string filename) const
+{
+  std::ofstream outputFile;
+  outputFile.open(filename);
+  outputFile << *this;
 }
 
+// eigentlich ist das doof so aber ich bin zu unkonzentriert...
+template <typename T, typename R, typename S>
+std::ofstream& operator<< ( std::ofstream& os, const PersistenceLandscape<T, R, S>& landscape)
+{
+  auto X = landscape.getX();
+  auto Y = landscape.getY();
+  
+  std::vector<std::string> lines;
+  for (size_t k = 0; k < X.size(); k++)
+  {
+    for (size_t i = 0; i < X[k].size(); i++)
+    {
+      if (k == 0) { lines.push_back( std::string() ); }
+      //lines[i] + std::to_string(X[k][i]) + " " + std::to_string(Y[k][i]) + " ";
+      lines.at(i).append( std::to_string(X[k][i]) );
+      lines.at(i).append( " " );
+      lines.at(i).append( std::to_string(Y[k][i]) );
+      lines.at(i).append( " " );
+    }
+  }
+  auto result = std::accumulate(lines.begin(), lines.end(), lines[0], [](std::string a, std::string b) { return a + "\n" + b; });
+  os << result;
+  return os;
+}
+
+} // namespace aleph
+
 #endif // PERSISTNCE_LANDSCAPE_IMP_H_
+     

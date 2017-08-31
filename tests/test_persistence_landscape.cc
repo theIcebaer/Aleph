@@ -1,22 +1,71 @@
 #include <tests/Base.hh>
 #include <aleph/persistenceDiagrams/PersistenceLandscape.hh>
+#include <aleph/persistenceDiagrams/PersistenceDiagram.hh>
+#include <aleph/containers/PointCloud.hh>
+#include <aleph/geometry/SphereSampling.hh>
+#include <aleph/geometry/BruteForce.hh>
+#include <aleph/geometry/distances/Euclidean.hh>
 
 #include <cmath>
 #include <deque>
 #include <limits>
+#include <random>
 
+using DataType           = double;
+using Distance = aleph::distances::Euclidean<DataType>;
+using PointCloud         = aleph::containers::PointCloud<DataType>;
+using PersistenceDiagram = aleph::PersistenceDiagram<DataType>;
+using PersistenceLandscape = aleph::PersistenceLandscape<>;
+
+
+template <class T> 
+aleph::PersistenceDiagram<T> createRandomPersistenceDiagram( unsigned n )
+{
+  std::random_device rd;
+  std::default_random_engine rng( rd() );
+  std::uniform_real_distribution<T> 
+    distribution( T(0), 
+                  T( std::nextafter( T(1), std::numeric_limits<T>::max() ) )
+                );
+
+  PersistenceDiagram D;
+
+  for( unsigned i = 0; i < n; i++ )
+  {
+    auto x = distribution( rng );
+    auto y = distribution( rng );
+
+    if( x > y )
+      std::swap( x,y );
+
+    D.add( x,y );
+  }
+
+  return D;
+}
+
+/*
+ * This function tests the basic functionalities of the PersistenceLandscape 
+ * class.
+ */
 
 void testPersistenceLandscape()
 {
-  
   double inf = std::numeric_limits<double>::infinity();
-  //using namespace global;
   
-  std::deque<pl::Interval<>> data_1 = {pl::Interval<>(1. , 5.), pl::Interval<>(2. , 8.), pl::Interval<>(3. , 4.), pl::Interval<>(5. , 9.), pl::Interval<>(6. , 7.), pl::Interval<>(9.,10.) };
-  std::deque<pl::Interval<>> data_2 = {pl::Interval<>(1. , 6.), pl::Interval<>(2. , 3.), pl::Interval<>(3. , 7.), pl::Interval<>(4. , 5.) };
+  std::deque<aleph::Interval<>> data_1 = 
+    { aleph::Interval<>(1. , 5.), aleph::Interval<>(2. , 8.), 
+      aleph::Interval<>(3. , 4.), aleph::Interval<>(5. , 9.),
+      aleph::Interval<>(6. , 7.), aleph::Interval<>(9.,10.) 
+    };
+      
+  std::deque<aleph::Interval<>> data_2 = 
+    { aleph::Interval<>(1. , 6.), aleph::Interval<>(2. , 3.),
+      aleph::Interval<>(3. , 7.), aleph::Interval<>(4. , 5.) 
+    };
 
-  pl::PersistenceLandscape<> l1(data_1);
-  pl::PersistenceLandscape<> l2(data_2);
+  PersistencLandscape l1(data_1);
+  PersistencLandscape l2(data_2);
   
   //std::cout << "l1: " << std::endl;
   /*for (auto layer : l1.getX())
@@ -28,19 +77,23 @@ void testPersistenceLandscape()
     }
     std::cout << "}" << std::endl;
   }*/
-  assert( l1.getX() == std::vector<std::vector<double>>({{-inf, 1.0, 3.0, 3.5, 5.0, 6.5, 7.0, 9.0, 9.5, 10, inf}, 
-                                                         {-inf, 2.0, 3.5, 5.0, 6.5, 8.0, inf},
-                                                         {-inf, 3.0, 3.5, 4.0, 6.0, 6.5, 7.0, inf}} ) );
-  assert( l1.getY() == std::vector<std::vector<double>>({{ 0.0, 0.0, 2.0, 1.5, 3.0, 1.5, 2.0, 0.0, 0.5, 0, 0.0 }, 
-                                                         { 0.0, 0.0, 1.5, 0.0, 1.5, 0.0, 0.0 },
-                                                         { 0.0, 0.0, 0.5, 0.0, 0.0, 0.5, 0.0, 0.0 }} ) );
+  assert( l1.getX() == std::vector<std::vector<double>>(
+    {{-inf, 1.0, 3.0, 3.5, 5.0, 6.5, 7.0, 9.0, 9.5, 10, inf}, 
+     {-inf, 2.0, 3.5, 5.0, 6.5, 8.0, inf},
+     {-inf, 3.0, 3.5, 4.0, 6.0, 6.5, 7.0, inf}} ) );
+  assert( l1.getY() == std::vector<std::vector<double>>(
+    {{ 0.0, 0.0, 2.0, 1.5, 3.0, 1.5, 2.0, 0.0, 0.5, 0, 0.0 }, 
+     { 0.0, 0.0, 1.5, 0.0, 1.5, 0.0, 0.0 },
+     { 0.0, 0.0, 0.5, 0.0, 0.0, 0.5, 0.0, 0.0 }} ) );
   
-  assert( l2.getX() == std::vector<std::vector<double>>({{-inf, 1.0, 3.5, 4.5, 5.0, 7.0, inf}, 
-                                                         {-inf, 2.0, 2.5, 3.0, 4.5, 6.0, inf},
-                                                         {-inf, 4.0, 4.5, 5.0, inf}} ) );
-  assert( l2.getY() == std::vector<std::vector<double>>({{ 0.0, 0.0, 2.5, 1.5, 2.0, 0.0, 0.0 }, 
-                                                         { 0.0, 0.0, 0.5, 0.0, 1.5, 0.0, 0.0 },
-                                                         { 0.0, 0.0, 0.5, 0.0, 0.0 }} ) );
+  assert( l2.getX() == std::vector<std::vector<double>>(
+    {{-inf, 1.0, 3.5, 4.5, 5.0, 7.0, inf}, 
+     {-inf, 2.0, 2.5, 3.0, 4.5, 6.0, inf},
+     {-inf, 4.0, 4.5, 5.0, inf}} ) );
+  assert( l2.getY() == std::vector<std::vector<double>>(
+    {{ 0.0, 0.0, 2.5, 1.5, 2.0, 0.0, 0.0 }, 
+     { 0.0, 0.0, 0.5, 0.0, 1.5, 0.0, 0.0 },
+     { 0.0, 0.0, 0.5, 0.0, 0.0 }} ) );
   
 
   assert( l1(0,0.0) == 0); // test x-value smaller than first critical point
@@ -57,55 +110,51 @@ void testPersistenceLandscape()
   assert( l1(0,4.0) == l1[0](4.0));
   assert( l1(0,200) == l1[0](200));
   
-  // std::cout<<" check 1" << std::endl;
-  
-  pl::PersistenceLandscape<> l3(l1);
-  // std::cout<<" check 4" << std::endl;
+  PersistencLandscape l3(l1); // test copy 
 
   l3 = l1 * 3.0;
-  // std::cout << "l3: " << std::endl;
-  /*for (auto layer : l3.getX())
-  {
-    std::cout << "{ ";
-    for (auto el : layer)
-    {
-      std::cout << el << " ";
-    }
-    std::cout << "}" << std::endl;
-  }*/
-  assert( l3.getX() == std::vector<std::vector<double>>({{-inf, 1.0, 3.0, 3.5, 5.0, 6.5, 7.0, 9.0, 9.5, 10, inf}, 
-                                                         {-inf, 2.0, 3.5, 5.0, 6.5, 8.0, inf},
-                                                         {-inf, 3.0, 3.5, 4.0, 6.0, 6.5, 7.0, inf}} ) );
-  assert( l3.getY() == std::vector<std::vector<double>>({{ 0.0, 0.0, 6.0, 4.5, 9.0, 4.5, 6.0, 0.0, 1.5, 0, 0.0 }, 
-                                                         { 0.0, 0.0, 4.5, 0.0, 4.5, 0.0, 0.0 },
-                                                         { 0.0, 0.0, 1.5, 0.0, 0.0, 1.5, 0.0, 0.0 }} ) );
+  
+  assert( l3.getX() == std::vector<std::vector<double>>(
+    {{-inf, 1.0, 3.0, 3.5, 5.0, 6.5, 7.0, 9.0, 9.5, 10, inf}, 
+     {-inf, 2.0, 3.5, 5.0, 6.5, 8.0, inf},
+     {-inf, 3.0, 3.5, 4.0, 6.0, 6.5, 7.0, inf}} ) );
+  assert( l3.getY() == std::vector<std::vector<double>>(
+    {{ 0.0, 0.0, 6.0, 4.5, 9.0, 4.5, 6.0, 0.0, 1.5, 0, 0.0 }, 
+     { 0.0, 0.0, 4.5, 0.0, 4.5, 0.0, 0.0 },
+     { 0.0, 0.0, 1.5, 0.0, 0.0, 1.5, 0.0, 0.0 }} ) );
+  
   l3 = 3.0 * l1;
-  assert( l3.getX() == std::vector<std::vector<double>>({{-inf, 1.0, 3.0, 3.5, 5.0, 6.5, 7.0, 9.0, 9.5, 10, inf}, 
-                                                         {-inf, 2.0, 3.5, 5.0, 6.5, 8.0, inf},
-                                                         {-inf, 3.0, 3.5, 4.0, 6.0, 6.5, 7.0, inf}} ) );
-  assert( l3.getY() == std::vector<std::vector<double>>({{ 0.0, 0.0, 6.0, 4.5, 9.0, 4.5, 6.0, 0.0, 1.5, 0, 0.0 }, 
-                                                         { 0.0, 0.0, 4.5, 0.0, 4.5, 0.0, 0.0 },
-                                                         { 0.0, 0.0, 1.5, 0.0, 0.0, 1.5, 0.0, 0.0 }} ) );
+  assert( l3.getX() == std::vector<std::vector<double>>(
+    {{-inf, 1.0, 3.0, 3.5, 5.0, 6.5, 7.0, 9.0, 9.5, 10, inf}, 
+     {-inf, 2.0, 3.5, 5.0, 6.5, 8.0, inf},
+     {-inf, 3.0, 3.5, 4.0, 6.0, 6.5, 7.0, inf}} ) );
+  
+  assert( l3.getY() == std::vector<std::vector<double>>(
+    {{ 0.0, 0.0, 6.0, 4.5, 9.0, 4.5, 6.0, 0.0, 1.5, 0, 0.0 }, 
+     { 0.0, 0.0, 4.5, 0.0, 4.5, 0.0, 0.0 },
+     { 0.0, 0.0, 1.5, 0.0, 0.0, 1.5, 0.0, 0.0 }} ) );
+  
   l3 = l1 + l1;
-  assert( l3.getX() == std::vector<std::vector<double>>({{-inf, 1.0, 3.0, 3.5, 5.0, 6.5, 7.0, 9.0, 9.5, 10, inf}, 
-                                                         {-inf, 2.0, 3.5, 5.0, 6.5, 8.0, inf},
-                                                         {-inf, 3.0, 3.5, 4.0, 6.0, 6.5, 7.0, inf}} ) );
-  assert( l3.getY() == std::vector<std::vector<double>>({{ 0.0, 0.0, 4.0, 3.0, 6.0, 3.0, 4.0, 0.0, 1.0, 0, 0.0 }, 
-                                                         { 0.0, 0.0, 3.0, 0.0, 3.0, 0.0, 0.0 },
-                                                         { 0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 0.0 }} ) );
+  assert( l3.getX() == std::vector<std::vector<double>>(
+    {{-inf, 1.0, 3.0, 3.5, 5.0, 6.5, 7.0, 9.0, 9.5, 10, inf}, 
+     {-inf, 2.0, 3.5, 5.0, 6.5, 8.0, inf},
+     {-inf, 3.0, 3.5, 4.0, 6.0, 6.5, 7.0, inf}} ) );
+  assert( l3.getY() == std::vector<std::vector<double>>(
+    {{ 0.0, 0.0, 4.0, 3.0, 6.0, 3.0, 4.0, 0.0, 1.0, 0, 0.0 }, 
+     { 0.0, 0.0, 3.0, 0.0, 3.0, 0.0, 0.0 },
+     { 0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 0.0 }} ) );
+  
   l3 = l1 + l2;
-  assert( l3.getX() == std::vector<std::vector<double>>({{-inf, 1.0, 3.0, 3.5, 4.5, 5.0, 6.5, 7.0, 9.0, 9.5, 10, inf}, 
-                                                         {-inf, 2.0, 2.5, 3.0, 3.5, 4.5, 5.0, 6.0, 6.5, 8.0, inf},
-                                                         {-inf, 3.0, 3.5, 4.0, 4.5, 5.0, 6.0, 6.5, 7.0, inf}} ) );
-  assert( l3.getY() == std::vector<std::vector<double>>({{0, 0, 4, 4, 4, 5, 2, 2, 0, 0.5, 0, 0}, 
-                                                         {0, 0, 1, 1, 2, 2, 1, 1, 1.5, 0, 0},
-                                                         {0, 0, 0.5, 0, 0.5, 0, 0, 0.5, 0, 0}} ) );
+  assert( l3.getX() == std::vector<std::vector<double>>(
+    {{-inf, 1.0, 3.0, 3.5, 4.5, 5.0, 6.5, 7.0, 9.0, 9.5, 10, inf}, 
+     {-inf, 2.0, 2.5, 3.0, 3.5, 4.5, 5.0, 6.0, 6.5, 8.0, inf},
+     {-inf, 3.0, 3.5, 4.0, 4.5, 5.0, 6.0, 6.5, 7.0, inf}} ) );
   
-  //{ std::vector of length 12, capacity 12 = {0, 0, 4, 4, 4, 5, 2, 2, 0, 0.5, 0, 0}, 
-  //  std::vector of length 11, capacity 11 = {0, 0, 1, 1, 2, 2, 1, 1, 1.5, 0, 0}, 
-  //  std::vector of length 10, capacity 10 = {0, 0, 0.5, 0, 0.5, 0, 0, 0.5, 0, 0}}
+  assert( l3.getY() == std::vector<std::vector<double>>(
+    {{0, 0, 4, 4, 4, 5, 2, 2, 0, 0.5, 0, 0}, 
+     {0, 0, 1, 1, 2, 2, 1, 1, 1.5, 0, 0},
+     {0, 0, 0.5, 0, 0.5, 0, 0, 0.5, 0, 0}} ) );
   
-  // TODO: ergebnisse ausrechnen und korrekte asserts einfügen 
   assert(l1 == l1);
   assert(l2 == l2);
   assert(l3 == l3);
@@ -117,17 +166,26 @@ void testPersistenceLandscape()
   l2 *= 3.0;
   assert(l2 == l3);
   
+  // Test Persistence Diagram IO ---------------------------------------------
+  unsigned n = 10;
+  PersistenceDiagram diag = createRandomPersistenceDiagram<double>(n);
+  PersistencLandscape l4(diag);
   
+  // Test output -------------------------------------------------------------
+  l1.fileOutput("l1.dat");
+  l2.fileOutput("l2.dat");
   
-  /*
-  {-inf, 0} {1, 0} {3, 2} {3.5, 1.5} {5, 3} {6.5, 1.5} {7, 2} {9, 0} {9.5, 0.5} {10, 0} {inf, 0} 
-  {-inf, 0} {2, 0} {3.5, 1.5} {5, 0} {6.5, 1.5} {8, 0} {inf, 0} 
-  {-inf, 0} {3, 0} {3.5, 0.5} {6, 0} {4, 0} {6.5, 0.5} {7, 0} {inf, 0}
+  std::deque<aleph::Interval<>> data_3 = { aleph::Interval<>(0.0, 1.0) };
+  std::deque<aleph::Interval<>> data_4 = { aleph::Interval<>(1.0, 3.0) };
   
-  {-inf, 0} {1, 0} {3.5, 2.5} {4.5, 1.5} {5, 2} {7, 0} {inf, 0} 
-  {-inf, 0} {2, 0} {2.5, 0.5} {3, 0} {4.5, 1.5} {6, 0} {inf, 0} 
-  {-inf, 0} {4, 0} {4.5, 0.5} {5, 0} {inf, 0}
-  */
+  l1 = PersistenceLandscape(data_3);
+  l2 = PersistenceLandscape(data_4);
+  auto res1 = l1.norm(1);
+  auto res2 = l2.norm(1);
+  assert( res1 == 0.25 );
+  assert( res2 == 1.0 );
+
+  //PersistenceDiagram<double> sphereDiag = createRandomSpherePersistenceDiagram(;
   return;
 }
 
@@ -135,3 +193,19 @@ int main ()
 {
   testPersistenceLandscape();
 }
+
+
+/* 
+  for debuggin outputs of landscapes the following code piece can be used:
+  
+  std::cout << "l3: " << std::endl;
+  for (auto layer : l3.getX())
+  {
+    std::cout << "{ ";
+    for (auto el : layer)
+    {
+      std::cout << el << " ";
+    }
+    std::cout << "}" << std::endl;
+  }
+*/
