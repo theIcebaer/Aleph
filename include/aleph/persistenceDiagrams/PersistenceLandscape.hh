@@ -1,5 +1,5 @@
-#ifndef PERSISTNCELANDSCAPE_H_
-#define PERSISTNCELANDSCAPE_H_
+#ifndef PERSISTENCELANDSCAPE_H_
+#define PERSISTENCELANDSCAPE_H_
 
 #include <iostream>
 #include <fstream>
@@ -27,14 +27,10 @@ template<typename T = double>
 using Interval = boost::icl::continuous_interval<T>; 
 
 // Comparing structs
-struct doubleEquality 
+bool equal (double a, double b, double precision = 1e-04)
 {
-  double precision = 1e-08;
-  inline bool operator() (double a, double b)
-  {
-    return (std::abs(a - b ) < precision);
-  }
-};
+  return (std::abs( a - b ) < precision);
+}
   
 struct intervalCompare
 {
@@ -82,6 +78,8 @@ private:
     //std::vector<R>& Y_k;
   public:
     LandscapeLayer(PersistenceLandscape& outer, size_t k);
+    T X() const;
+    R Y() const;
     R operator() (T t);
   };
   
@@ -91,11 +89,11 @@ private:
   const static T minusInfinity;// = -std::numeric_limits<T>::infinity();
   
   static PersistenceLandscape<T,R,S> linComb (std::vector<PersistenceLandscape<T,R,S>> landscapeV_, std::vector<S> scalarV);
-  
   static std::pair<std::vector<T>, std::vector<R> > linComb_singleLayer ( const std::vector<PersistenceLandscape<T,R,S>>& landscapeV, const std::vector<S>& a,const size_t k);
   
 public:
   // constructors:
+  PersistenceLandscape ();
   PersistenceLandscape (std::deque<Interval<T>> A); // Constructor by birth-death pairs
   PersistenceLandscape (const aleph::PersistenceDiagram<T>& diag);
   PersistenceLandscape (std::vector<std::vector<T>>, std::vector<std::vector<R>>); // Constructor by already claculated critical points
@@ -113,8 +111,6 @@ public:
   PersistenceLandscape& operator*= (const ScalarType& scalar);
   PersistenceLandscape operator* (const ScalarType& scalar) const;
   
-  // PersistenceLandscape& operator/= (const ScalarType& scalar); // erst wenn es einen anwendungsfall gibt
-  // PersistenceLandscape operator/ (const ScalarType& scalar) const;
   
   // non operator functionalities
   R norm(double p) const; // schoener als eigene Klasse mit template p und argument lambda?
@@ -137,7 +133,50 @@ constexpr T PersistenceLandscape<T,R,S>::minusInfinity = -std::numeric_limits<T>
 template <typename T, typename R, typename S> 
 PersistenceLandscape<T,R,S> PersistenceLandscape<T,R,S>::linComb (std::vector<PersistenceLandscape<T,R,S>> landscapeV_, std::vector<S> scalarV)
 {
-    size_t layerN = landscapeV_[0].layer();
+    // dirty hack for implementing addition of two landscapes of different size
+    // TODO implement iterators and + as well as += better
+    size_t layerN = 0;
+    std::vector<std::vector<T>> X_tail;
+    std::vector<std::vector<T>> Y_tail;
+    
+    if ( landscapeV_.size() == 2 )
+    {
+      int diff = static_cast<int>(landscapeV_[0].layer()) - static_cast<int>(landscapeV_[1].layer());
+      if (diff > 0) 
+      {
+        layerN = landscapeV_[1].layer();
+        auto tmpX = landscapeV_[0].getX();
+        auto tmpY = landscapeV_[0].getY();
+        X_tail = std::vector<std::vector<T>>( (tmpX.end() - diff) , tmpX.end() );
+        Y_tail = std::vector<std::vector<T>>( (tmpY.end() - diff) , tmpY.end() );
+      }
+      else if (diff < 0)
+      {
+        layerN = landscapeV_[0].layer();
+        auto tmpX = landscapeV_[1].getX();
+        auto tmpY = landscapeV_[1].getY();
+        X_tail = std::vector<std::vector<T>>( (tmpX.end() - std::abs(diff)) , tmpX.end() );
+        Y_tail = std::vector<std::vector<T>>( (tmpY.end() - std::abs(diff)) , tmpY.end() );
+      }
+      else 
+      {
+        layerN = landscapeV_[0].layer();
+      }
+    }
+    else
+    {
+      // bad but i have to assume here that this function only gets called by operators who add two vectors
+      // this should be implemented in a better way at a later time.
+      layerN = landscapeV_[0].layer();
+      if (landscapeV_.size() > 2) assert(false);
+    }
+    
+    //bad coding style
+    //auto minLandscape = std::min_element( landscapeV_.begin(), landscapeV.end(), 
+    //                                  [] (const PersistenceLandscape& a, const PersistenceLandscape& a) 
+    //                                   { return a.layer() < b.layer(); }
+    //                  );
+    //unsigned layerN = minLandscape.layer();
     std::vector<std::vector<T>> X_ = {};
     std::vector<std::vector<R>> Y_ = {};
     // std::cout<< "check 2" << std::endl;
@@ -150,19 +189,21 @@ PersistenceLandscape<T,R,S> PersistenceLandscape<T,R,S>::linComb (std::vector<Pe
         X_.push_back(result.first);
         Y_.push_back(result.second);
     }
+    X_.insert( X_.end(), X_tail.begin(), X_tail.end() );
+    Y_.insert( Y_.end(), Y_tail.begin(), Y_tail.end() );
     return PersistenceLandscape<T,R,S>(X_, Y_);
 }
 
 template <typename T, typename R, typename S>
-std::pair<std::vector<T>, std::vector<R> > PersistenceLandscape<T,R,S>::linComb_singleLayer ( const std::vector<PersistenceLandscape<T,R,S>>& landscapeV, const std::vector<S>& a,const size_t k)
+std::pair<std::vector<T>, std::vector<R> > PersistenceLandscape<T,R,S>::linComb_singleLayer ( const std::vector<PersistenceLandscape<T,R,S>>& landscapeV, const std::vector<S>& a,const size_t k )
 {
-    size_t layerN = landscapeV[0].layer();
+    //size_t layerN = landscapeV[0].layer();
     size_t N = landscapeV.size();
     // merge the vectors evtl. with std::accumulate TODO: capsule this in a structure
     std::vector<T> X;
     for (auto landscape : landscapeV)
     {
-      assert (landscape.layer() == layerN);
+      //assert (landscape.layer() == layerN);
 
       std::vector<T> tmp = {};
       std::vector<T> X_i = landscape.getX()[k];
@@ -203,6 +244,14 @@ std::pair<std::vector<T>, std::vector<R> > PersistenceLandscape<T,R,S>::linComb_
     
     return std::make_pair(X,Y);
 }  
+
+template <typename T, typename R, typename S>
+PersistenceLandscape<T,R,S>::PersistenceLandscape()
+{
+  this->X = {{minusInfinity, Infinity}};
+  this->Y = {{0, 0}};
+}
+
 
 template <typename T, typename R, typename S>
 PersistenceLandscape<T,R,S>::PersistenceLandscape(std::vector<std::vector<T>> X_, std::vector<std::vector<R>> Y_) : X(X_), Y(Y_)
@@ -308,9 +357,9 @@ template <typename T, typename R, typename S>
 PersistenceLandscape<T,R,S>::PersistenceLandscape( const aleph::PersistenceDiagram<T>& diag)
 {
   std::deque<Interval<T>> queue = {};
-  for( auto point : diag)
+  for( auto point : diag )
   {
-    queue.push_back( Interval<T>(point.x(), point.y()) );
+    queue.push_back( Interval<T>(std::sqrt(2.0) * point.x(), std::sqrt(2.0) * point.y()) );
   }
   *this = PersistenceLandscape(queue);
 }
@@ -385,37 +434,49 @@ PersistenceLandscape<T,R,S>& PersistenceLandscape<T,R,S>::operator*= (const S& s
 template <typename T, typename R, typename S>
 R PersistenceLandscape<T,R,S>::integral (size_t k,double p) const
 {
-  using aleph::utilities::operator*;
-  using aleph::utilities::operator+=;
+  //std::cout << "layer k is: " << k << std::endl;
+  //using aleph::utilities::operator*;
+  //using aleph::utilities::operator+=;
   R surface(0);
   for (size_t i = 2; i < X[k].size()-1; i++)
-  {
-    // steigung
+  { //maybe look for problems with numerical stability??
+    // steigung:
     R a = (Y[k][i]-Y[k][i-1]) / (X[k][i]-X[k][i-1]); 
-    // y-achsenabschnitt
+    //std::cout<< "a: " << a << std::endl;
+    // y-achsenabschnitt:
     R b = Y[k][i] - (a * X[k][i]);
+    //std::cout << "b: " << b << std::endl;
     if ( a != 0) //besser Y[k][i] == Y[k][i-1] ?
     {
-      surface += 1/(a * (p + 1.0)) * ( pow( (a*X[k][i] + b) , p + 1 ) - pow( (a*X[k][i-1] + b), p + 1) ); 
-      //TODO: klären ob es nicht ein integral für positive Komponenten und eines für negative geben müsste.
+      auto res = ( 1/(a * (p + 1.0)) * ( pow( (a*X[k][i] + b) , p + 1 ) - pow( (a*X[k][i-1] + b), p + 1) ) ); 
+      //std::cout<< "surface: " << res << std::endl;
+      surface += res;
     }
     else 
     {
-      surface += (X[k][i] - X[k][i-1]) * pow( Y[k][i], p ); 
+      auto res = (X[k][i] - X[k][i-1]) * pow( Y[k][i], p ); 
+      //std::cout<< "surface: " << res << std::endl;
+      surface += res;
     } // explanation insert
   }
+  //std::cout<< "surface for k = " << k << ": " << surface << std::endl;
   return surface;
 }
 
 template <typename T, typename R, typename S>
 R PersistenceLandscape<T,R,S>::norm (double p) const
 {
-  R surface = R(0); // does this work??
+  //std::cout << "p: " << p << std::endl;
+  if ( p <= 0 ) 
+  {
+    throw std::invalid_argument("p is not positive"); 
+  }
+  R surface = R(0);
   for (size_t k = 0; k < X.size(); k++)
   {
     surface += integral(k, p);
   }
-  return surface;
+  return pow( surface, (1/p) );
 }
 
 template <typename T, typename R, typename S>
@@ -458,10 +519,11 @@ PersistenceLandscape<T,R,S>::LandscapeLayer::LandscapeLayer(PersistenceLandscape
 template <typename T, typename R, typename S>
 R /*__attribute__((optimize("O0")))*/ PersistenceLandscape<T,R,S>::LandscapeLayer::operator() ( T t)
 {
+  // falls k > X.size() return trivial layer 0
   auto xIter = std::lower_bound(outer.X[k].begin(), outer.X[k].end(), t);
   if (*xIter == Infinity) {return 0;} // t > last crit point
   else if( *xIter == outer.X[k][0]) { return 0; }
-  else if( *xIter == outer.X[k][1]) { return 0;} 
+  else if( *xIter == outer.X[k][1]) { return 0; } 
   size_t index = xIter - outer.X[k].begin();
   // linear interpolation
   double m = (outer.Y[k][index] - outer.Y[k][index - 1]) / (outer.X[k][index] - outer.X[k][index - 1]); 
@@ -470,39 +532,36 @@ R /*__attribute__((optimize("O0")))*/ PersistenceLandscape<T,R,S>::LandscapeLaye
 }
 
 template <typename T, typename R, typename S>
-void PersistenceLandscape<T,R,S>::fileOutput (std::string filename) const
+void __attribute__((optimize("O0"))) PersistenceLandscape<T,R,S>::fileOutput (std::string filename) const
 {
   std::ofstream outputFile;
   outputFile.open(filename);
   outputFile << *this;
 }
 
-// eigentlich ist das doof so aber ich bin zu unkonzentriert...
 template <typename T, typename R, typename S>
-std::ofstream& operator<< ( std::ofstream& os, const PersistenceLandscape<T, R, S>& landscape)
+std::ofstream& __attribute__((optimize("O0"))) operator<< ( std::ofstream& os, const PersistenceLandscape<T, R, S>& landscape)
 {
   auto X = landscape.getX();
   auto Y = landscape.getY();
   
-  std::vector<std::string> lines;
-  for (size_t k = 0; k < X.size(); k++)
+  os << "# persistence landscape" << std::endl;
+  for ( size_t k = 0; k < X.size(); k++ )
   {
-    for (size_t i = 0; i < X[k].size(); i++)
+    os << "# layer " << k << ":" << std::endl;
+    os << "# X Y" << std::endl;
+    for ( size_t i = 0; i < X[k].size(); i++ )
     {
-      if (k == 0) { lines.push_back( std::string() ); }
-      //lines[i] + std::to_string(X[k][i]) + " " + std::to_string(Y[k][i]) + " ";
-      lines.at(i).append( std::to_string(X[k][i]) );
-      lines.at(i).append( " " );
-      lines.at(i).append( std::to_string(Y[k][i]) );
-      lines.at(i).append( " " );
+      os << X[k][i] << " " << Y[k][i] << std::endl;
     }
+    os << std::endl;
+    os << std::endl;
   }
-  auto result = std::accumulate(lines.begin(), lines.end(), lines[0], [](std::string a, std::string b) { return a + "\n" + b; });
-  os << result;
+  
   return os;
 }
 
 } // namespace aleph
 
-#endif // PERSISTNCE_LANDSCAPE_IMP_H_
+#endif // PERSISTENCE_LANDSCAPE_IMP_H_
      

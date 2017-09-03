@@ -186,6 +186,7 @@ PersistenceDiagram createRandomSpherePersistenceDiagram( DataType r, unsigned n 
 
 int main( int argc, char** argv )
 {
+  
   static option commandLineOptions[] = {
       { "m"     , required_argument, nullptr, 'm' },
       { "n"     , required_argument, nullptr, 'n' },
@@ -202,7 +203,7 @@ int main( int argc, char** argv )
   unsigned n            = 50;
   DataType R            = DataType(0.25);
   DataType r            = DataType(0.50);
-
+  
   bool sampleFromBox    = false;
   bool sampleFromSphere = false;
   bool sampleFromTorus  = false;
