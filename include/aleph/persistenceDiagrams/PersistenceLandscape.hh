@@ -68,6 +68,8 @@ private:
   //std::vector<Functor> functions;
   std::vector<std::vector<T> > X; // Critical x-values
   std::vector<std::vector<R> > Y; // Critical y-values
+  T intervalMax;
+  T intervalMin;
   
   class LandscapeLayer
   {
@@ -94,7 +96,8 @@ private:
 public:
   // constructors:
   PersistenceLandscape ();
-  PersistenceLandscape (std::deque<Interval<T>> A); // Constructor by birth-death pairs
+  PersistenceLandscape (std::deque<Interval<T>> A); // Constructor by birth-death pairs  
+  PersistenceLandscape (const aleph::PersistenceDiagram<T>& diag, T intervalMin, T intervalMax);
   PersistenceLandscape (const aleph::PersistenceDiagram<T>& diag);
   PersistenceLandscape (std::vector<std::vector<T>>, std::vector<std::vector<R>>); // Constructor by already claculated critical points
   PersistenceLandscape (const PersistenceLandscape& other);
@@ -120,6 +123,7 @@ public:
   std::vector<std::vector<T> > getX() const; // maybe it should return a reference?
   std::vector<std::vector<T> > getY() const; // s.o.
   size_t layer() const;
+  //void restrictIntervals
   void fileOutput(std::string filename) const;
 };
 
@@ -386,12 +390,29 @@ PersistenceLandscape<T,R,S>::PersistenceLandscape(std::deque<Interval<T>> A)
 }
 
 template <typename T, typename R, typename S>
-PersistenceLandscape<T,R,S>::PersistenceLandscape( const aleph::PersistenceDiagram<T>& diag)
+PersistenceLandscape<T,R,S>::PersistenceLandscape( const aleph::PersistenceDiagram<T>& diag) : PersistenceLandscape<T,R,S>(diag, std::numeric_limits<T>::min(), std::numeric_limits<T>::max()) 
+{}
+
+
+template <typename T, typename R, typename S>
+PersistenceLandscape<T,R,S>::PersistenceLandscape( const aleph::PersistenceDiagram<T>& diag, T intervalMin_, T intervalMax_)
 {
+  this->intervalMin = intervalMin_;
+  this->intervalMax = intervalMax_;
+  
   std::deque<Interval<T>> queue = {};
   for( auto point : diag )
   {
-    queue.push_back( Interval<T>(std::sqrt(2.0) * point.x(), std::sqrt(2.0) * point.y()) );
+    auto lowerBound = std::sqrt(2.0) * point.x();
+    auto upperBound = std::sqrt(2.0) * point.y();
+    if (lowerBound < intervalMin) {
+      lowerBound = intervalMin;
+    }
+    if (upperBound > intervalMax)
+    {
+      upperBound = intervalMax;
+    }
+    queue.push_back( Interval<T>(lowerBound, upperBound) );
   }
   *this = PersistenceLandscape(queue);
 }
