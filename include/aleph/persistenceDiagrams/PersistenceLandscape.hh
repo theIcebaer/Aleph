@@ -83,7 +83,7 @@ private:
     R operator() (T t);
   };
   
-  std::vector<LandscapeLayer> layerV; // stores founctors for the single layers
+  //std::vector<LandscapeLayer> layerV; // stores founctors for the single layers
   
   const static T Infinity;// = std::numeric_limits<T>::infinity();
   const static T minusInfinity;// = -std::numeric_limits<T>::infinity();
@@ -268,6 +268,7 @@ PersistenceLandscape<T,R,S>::PersistenceLandscape(const PersistenceLandscape& ot
 template <typename T, typename R, typename S>
 PersistenceLandscape<T,R,S>::PersistenceLandscape(std::deque<Interval<T>> A) 
 {
+  //R MAX = 2000;
   size_t k = 0;
   std::vector<std::vector<CritPoint<T,R>> > L;
 
@@ -284,19 +285,43 @@ PersistenceLandscape<T,R,S>::PersistenceLandscape(std::deque<Interval<T>> A)
     double b = lower(current); // aufpassen ohne referenz funktioniert es evtl nicht richtig
     double d = upper(current);
     auto p = A.begin();
+    if( b == minusInfinity && d == Infinity )
+    {
+      L[k].push_back(CritPoint<T,R>(minusInfinity, Infinity));
+      L[k].push_back(CritPoint<T,R>(Infinity, Infinity));
+    }
+    else
+    {
+      if (d == Infinity)
+      {
+        L[k].push_back(CritPoint<T,R>(minusInfinity,0));
+        L[k].push_back(CritPoint<T,R>(b,0));
+        L[k].push_back(CritPoint<T,R>(Infinity,Infinity));
+      }
+      else
+      {
+        if(b == minusInfinity)
+        {
+          L[k].push_back(CritPoint<T,R>(minusInfinity,Infinity));
+        }
+        else
+        {
+          L[k].push_back(CritPoint<T,R>(minusInfinity,0.) );
+          L[k].push_back(CritPoint<T,R>(b,0.) );
+          L[k].push_back(CritPoint<T,R>( (b + d) / 2. , (d - b) / 2. ));
+        }
+      }
+    }
     
     //std::cout << *p << std::endl;
     //std::cout << "k is: " << k << " L[k]: " << std::endl;
     //std::cout << L.size() << std::endl;
     //std::cout <<"check 1.1"<< std::endl;
-    L[k].push_back(CritPoint<T,R>(minusInfinity,0.) );
     //std::cout<< "check 1.2" << std::endl;
-    L[k].push_back(CritPoint<T,R>(b,0.) );
     //std::cout<< "check 1.3" << std::endl;
     
-    L[k].push_back(CritPoint<T,R>( (b + d) / 2. , (d - b) / 2. ));
     
-    while ( L[k].back() != CritPoint<T,R>(Infinity,0.) ) // anders herum??
+    while ( L[k].back() != (CritPoint<T,R>(Infinity,0.)) && L[k].back() != CritPoint<T,R>(Infinity,Infinity) ) // anders herum??
     {
       //std::cout<< "check 2" << std::endl;
       //for (auto it : A ) { std::cout << it << " "; } std::cout << std::endl;
@@ -336,14 +361,21 @@ PersistenceLandscape<T,R,S>::PersistenceLandscape(std::deque<Interval<T>> A)
           //std::cout<< " b_ < d" << std::endl; std::cout<< "b_: " << b_<< " "; std::cout<< "d: " << d<< std::endl;
           //for (auto it : A ) { std::cout << it << " "; } std::cout <<"check" << std::endl;
           //std::cout << "p: " <<*p << std::endl;
-          A.insert(p, Interval<T>(b_, d) );
+          p = A.insert(p, Interval<T>(b_, d) );
           //for (auto it : A ) { std::cout << it << " "; } std::cout <<"check" << std::endl;
           //std::cout<< " b_ < d" << std::endl; std::cout<< "b_: " << b_<< " "; std::cout<< "d: " << d<< std::endl;
           p++;
         }
-        L[k].push_back(CritPoint<T,R>( (b_+d_) / 2. , (d_-b_) / 2. ));
-        b = b_; // kann nicht wirklich stimmen auf referenzen aufpassen
-        d = d_; // s.o.
+        if( d_ == Infinity )
+        {
+          L[k].push_back(CritPoint<T,R>(Infinity,Infinity));
+        }
+        else
+        {
+          L[k].push_back(CritPoint<T,R>( (b_+d_) / 2. , (d_-b_) / 2. ));
+          b = b_; // kann nicht wirklich stimmen auf referenzen aufpassen
+          d = d_; // s.o.          
+        }
       }
     }
     ++k;
@@ -546,10 +578,10 @@ std::ofstream& __attribute__((optimize("O0"))) operator<< ( std::ofstream& os, c
   auto Y = landscape.getY();
   
   os << "# persistence landscape" << std::endl;
+  os << "# X Y" << std::endl;
   for ( size_t k = 0; k < X.size(); k++ )
   {
-    os << "# layer " << k << ":" << std::endl;
-    os << "# X Y" << std::endl;
+    os << "\"layer " << k << ":\"" << std::endl;
     for ( size_t i = 0; i < X[k].size(); i++ )
     {
       os << X[k][i] << " " << Y[k][i] << std::endl;

@@ -11,12 +11,12 @@
 #include <limits>
 #include <random>
 
-using DataType           = double;
-using Distance = aleph::distances::Euclidean<DataType>;
-using PointCloud         = aleph::containers::PointCloud<DataType>;
-using PersistenceDiagram = aleph::PersistenceDiagram<DataType>;
-using PersistenceLandscape = aleph::PersistenceLandscape<>;
-using Interval = aleph::Interval<double>;
+using DataType              = double;
+using Distance              = aleph::distances::Euclidean<DataType>;
+using PointCloud            = aleph::containers::PointCloud<DataType>;
+using PersistenceDiagram    = aleph::PersistenceDiagram<DataType>;
+using PersistenceLandscape  = aleph::PersistenceLandscape<>;
+using Interval              = aleph::Interval<double>;
 
 template <class T> 
 aleph::PersistenceDiagram<T> createRandomPersistenceDiagram( unsigned n )
@@ -165,6 +165,7 @@ void testPersistenceLandscape()
   assert(l2 == l3);
   
   // Test output -------------------------------------------------------------
+  l2 = PersistenceLandscape(data_2);
   l1.fileOutput("l1.dat");
   l2.fileOutput("l2.dat");
   
@@ -177,7 +178,7 @@ void testPersistenceLandscape()
   assert( l1 + l5 == l5 + l1 );
   l2 = l1 + l0;
   assert ( l2 == l1 );
-  
+  assert ( l2 == (l2 + l0) );
   // Test Persistence Diagram IO ---------------------------------------------
   unsigned n = 10;
   PersistenceDiagram diag = createRandomPersistenceDiagram<double>(n);
