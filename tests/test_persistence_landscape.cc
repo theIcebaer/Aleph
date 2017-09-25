@@ -49,7 +49,7 @@ aleph::PersistenceDiagram<T> createRandomPersistenceDiagram( unsigned n )
  * class.
  */
 
-void testPersistenceLandscape()
+void __attribute__((optimize("O0")))testPersistenceLandscape()
 {
   double inf = std::numeric_limits<double>::infinity();
   
@@ -71,9 +71,28 @@ void testPersistenceLandscape()
     { Interval(1. , 6.), Interval(2. , 3.),
       Interval(3. , 7.), Interval(4. , 5.) 
     };
+    
+  std::deque<Interval> twisted_data_1 = 
+    { Interval(2. , 8.), Interval(1. , 5.),
+      Interval(3. , 4.), Interval(9.,10.) , 
+      Interval(5. , 9.), Interval(6. , 7.)
+    };
 
+  std::deque<Interval> doubled_data_1 = 
+    { Interval(2. , 8.), Interval(1. , 5.),
+      Interval(3. , 4.), Interval(9.,10.) , 
+      Interval(5. , 9.), Interval(6. , 7.),
+      Interval(2. , 8.), Interval(1. , 5.),
+      Interval(3. , 4.), Interval(9.,10.) 
+    };    
+    
   PersistenceLandscape l1(data_1);
   PersistenceLandscape l2(data_2);
+  PersistenceLandscape twisted_l1(twisted_data_1);
+  PersistenceLandscape doubled_l1(doubled_data_1);
+  
+  assert( l1.getX() == twisted_l1.getX() );
+  assert( l1.getY() == twisted_l1.getY() );
   
   assert( l1.getX() == std::vector<std::vector<double>>(
     {{-inf, 1.0, 3.0, 3.5, 5.0, 6.5, 7.0, 9.0, 9.5, 10, inf}, 
@@ -204,6 +223,135 @@ void testPersistenceLandscape()
   assert( l1.norm(2) > 5.37742 );
   //assert( l2.norm(1) = 
   //PersistenceDiagram<double> sphereDiag = createRandomSpherePersistenceDiagram(;
+  // test Landscape Calculation based on a real data diagram from reddit graphs
+  
+  
+  PersistenceDiagram D;
+  
+  D.add( 1, inf); 
+  D.add( 1, inf); 
+  D.add( 1, 58); 
+  D.add( 1, 57); 
+  D.add( 1, 58); 
+  D.add( 1, 57); 
+  D.add( 1, 57); 
+  D.add( 1, 57); 
+  D.add( 1, 58); 
+  D.add( 1, 57); 
+  D.add( 1, 12); 
+  D.add( 1, 57); 
+  D.add( 1, 11); 
+  D.add( 1, 57); 
+  D.add( 1, 58); 
+  D.add( 1, 7 ); 
+  D.add( 1, 7 ); 
+  D.add( 1, 57); 
+  D.add( 1, 57);
+  D.add( 1, 10); 
+  D.add( 1, 57); 
+  D.add( 1, 9 ); 
+  D.add( 1, 57); 
+  D.add( 1, 57); 
+  D.add( 1, 10); 
+  D.add( 1, 57); 
+  D.add( 1, 8 ); 
+  D.add( 1, 57);
+  D.add( 1, 59); 
+  D.add( 1, 58); 
+  D.add( 1, 57); 
+  D.add( 1, 57);
+  D.add( 1, 7 ); 
+  D.add( 1, 13); 
+  D.add( 1, 7 ); 
+  D.add( 1, 10); 
+  D.add( 1, 57); 
+  D.add( 1, 11); 
+  D.add( 1, 5 ); 
+  D.add( 1, 57); 
+  D.add( 1, 7 ); 
+  D.add( 1, 57); 
+  D.add( 1, 57); 
+  D.add( 1, 58); 
+  D.add( 1, 57); 
+  D.add( 1, 8 ); 
+  D.add( 1, 57); 
+  D.add( 1, 57); 
+  D.add( 1, 57); 
+  D.add( 1, 10); 
+  D.add( 1, 8 ); 
+  D.add( 1, 57); 
+  D.add( 1, 57); 
+  D.add( 1, 57); 
+  D.add( 1, 57); 
+  D.add( 1, 8 ); 
+  D.add( 1, 5 ); 
+  D.add( 1, 57); 
+  D.add( 1, 57); 
+  D.add( 1, 57); 
+  D.add( 1, 57); 
+  D.add( 1, 57); 
+  D.add( 1, 5 ); 
+  D.add( 1, 8 ); 
+  D.add( 1, 57); 
+  D.add( 1, 6 ); 
+  D.add( 1, 7 ); 
+  D.add( 1, 57); 
+  D.add( 1, 57); 
+  D.add( 1, 2 ); 
+  D.add( 1, 10); 
+  D.add( 2, 5 ); 
+  D.add( 2, 6 ); 
+  D.add( 2, 3 ); 
+  D.add( 2, 3 ); 
+  D.add( 2, 5 ); 
+  D.add( 2, 5 ); 
+  D.add( 2, 3 ); 
+  D.add( 2, 8 ); 
+  D.add( 2, 58); 
+  D.add( 2, 6 ); 
+  D.add( 2, 4 ); 
+  D.add( 2, 4 ); 
+  D.add( 2, 5 ); 
+  D.add( 2, 8 ); 
+  D.add( 2, 3 ); 
+  D.add( 2, 4 ); 
+  D.add( 2, 4 ); 
+  D.add( 2, 4 ); 
+  D.add( 2, 3 ); 
+  D.add( 2, 4 ); 
+  D.add( 2, 8 ); 
+  D.add( 3, 5 ); 
+  D.add( 3, 4 ); 
+  D.add( 3, 4 ); 
+  D.add( 3, 4 ); 
+  D.add( 3, 4 ); 
+  D.add( 3, 5 ); 
+  D.add( 3, 5 ); 
+  D.add( 4, 5 ); 
+  D.add( 4, 5 ); 
+  D.add( 6, 7 ); 
+  D.add( 6, 7 );
+  D.add( 6, 7 );
+  D.add( 7, 8 );
+  D.add( 9, 10);
+  D.add( 56, 57);
+  
+  PersistenceLandscape landscape_from_diag(D,0,115);
+  
+  PersistenceDiagram D1;
+  
+  D1.add(7 , inf); 
+  D1.add(8 , inf); 
+  D1.add(8 , inf); 
+  D1.add(12, inf); 
+  D1.add(14, inf); 
+  D1.add(19, inf); 
+  D1.add(75, inf); 
+  D1.add(76, inf); 
+  D1.add(78, inf); 
+  D1.add(82, inf);
+  
+  PersistenceLandscape landscape_from_diag1(D1,0,115);
   return;
 }
 

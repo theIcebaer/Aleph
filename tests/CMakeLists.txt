@@ -55,7 +55,8 @@ ENABLE_IF_SUPPORTED( CMAKE_CXX_FLAGS "-pedantic" )
 # FIXME: Ugly hack to make generic lambdas work
 SET_SOURCE_FILES_PROPERTIES(
   test_bootstrap.cc test_persistence_landscape.cc
-  PROPERTIES COMPILE_FLAGS "-std=c++14"
+  PROPERTIES COMPILE_FLAGS "-std=c++14 -O0 -g"
+  
 )
 
 ADD_EXECUTABLE( test_barycentric_subdivision          test_barycentric_subdivision.cc )

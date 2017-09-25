@@ -127,9 +127,11 @@ public:
   std::vector<std::vector<T> > getX() const; // maybe it should return a reference?
   std::vector<std::vector<T> > getY() const; // s.o.
   size_t layer() const;
-  unsigned size() const;
+  size_t size() const;
   //void restrictIntervals
   void fileOutput(std::string filename) const;
+  T getIntervalMin() const;
+  T getIntervalMax() const;
 };
 
 
@@ -185,7 +187,7 @@ PersistenceLandscape<T,R,S> PersistenceLandscape<T,R,S>::linComb (std::vector<Pe
     //                                  [] (const PersistenceLandscape& a, const PersistenceLandscape& a) 
     //                                   { return a.layer() < b.layer(); }
     //                  );
-    //unsigned layerN = minLandscape.layer();
+    //size_t layerN = minLandscape.layer();
     std::vector<std::vector<T>> X_ = {};
     std::vector<std::vector<R>> Y_ = {};
     // std::cout<< "check 2" << std::endl;
@@ -275,14 +277,14 @@ PersistenceLandscape<T,R,S>::PersistenceLandscape(const PersistenceLandscape& ot
 
 
 template <typename T, typename R, typename S>
-PersistenceLandscape<T,R,S>::PersistenceLandscape(std::deque<Interval<T>> A) 
+PersistenceLandscape<T,R,S>::PersistenceLandscape (std::deque<Interval<T>> A) 
 {
   //R MAX = 2000;
   size_t k = 0;
   std::vector<std::vector<CritPoint<T,R>> > L;
 
   std::sort(A.begin(), A.end(), intervalCompare());
-
+  //std::unique(A.begin(), A.end()); 
   while ( !(A.empty()) )
   {
     // for (auto it : A ) { std::cout << it << " "; } std::cout << std::endl;
@@ -296,6 +298,7 @@ PersistenceLandscape<T,R,S>::PersistenceLandscape(std::deque<Interval<T>> A)
     auto p = A.begin();
     if( b == minusInfinity && d == Infinity )
     {
+      throw;
       L[k].push_back(CritPoint<T,R>(minusInfinity, Infinity));
       L[k].push_back(CritPoint<T,R>(Infinity, Infinity));
     }
@@ -303,6 +306,7 @@ PersistenceLandscape<T,R,S>::PersistenceLandscape(std::deque<Interval<T>> A)
     {
       if (d == Infinity)
       {
+        throw;
         L[k].push_back(CritPoint<T,R>(minusInfinity,0));
         L[k].push_back(CritPoint<T,R>(b,0));
         L[k].push_back(CritPoint<T,R>(Infinity,Infinity));
@@ -311,6 +315,7 @@ PersistenceLandscape<T,R,S>::PersistenceLandscape(std::deque<Interval<T>> A)
       {
         if(b == minusInfinity)
         {
+          throw;
           L[k].push_back(CritPoint<T,R>(minusInfinity,Infinity));
         }
         else
@@ -355,33 +360,53 @@ PersistenceLandscape<T,R,S>::PersistenceLandscape(std::deque<Interval<T>> A)
         {
           //std::cout<< " b_ equals d" << std::endl;
           L[k].push_back(CritPoint<T,R>(b_,0.) );
+          if( (L[k].end()-2)->first == L[k].back().first)
+          {
+            throw std::logic_error("Double X value added");
+          }
         }
         else if (b_ > d)
         {
           //std::cout<< " b_ > d" << std::endl;
           L[k].push_back(CritPoint<T,R>(d ,0.) );
           L[k].push_back(CritPoint<T,R>(b_,0.) );
+          if( ((L[k].end()-2)->first) == (L[k].back().first))
+          {
+            throw std::logic_error("Double X value added");
+          }
         }
         else
         {
+
           //std::cout<< " b_ < d" << std::endl; std::cout<< "b_: " << b_<< " "; std::cout<< "d: " << d<< std::endl;
           L[k].push_back(CritPoint<T,R>( (b_+d) / 2. , (d-b_) / 2. ));
+          if( (L[k].end()-2)->first == L[k].back().first)
+          {
+            throw std::logic_error("Double X value added");
+          }
+          
           //std::cout<< " p: " << *p<< std::endl;
           //std::cout<< " b_ < d" << std::endl; std::cout<< "b_: " << b_<< " "; std::cout<< "d: " << d<< std::endl;
           //for (auto it : A ) { std::cout << it << " "; } std::cout <<"check" << std::endl;
           //std::cout << "p: " <<*p << std::endl;
-          p = A.insert(p, Interval<T>(b_, d) );
+          p = A.insert( std::upper_bound(p, A.end(), Interval<T>(b_, d), intervalCompare() ),
+                        Interval<T>(b_, d) );
           //for (auto it : A ) { std::cout << it << " "; } std::cout <<"check" << std::endl;
           //std::cout<< " b_ < d" << std::endl; std::cout<< "b_: " << b_<< " "; std::cout<< "d: " << d<< std::endl;
           p++;
         }
         if( d_ == Infinity )
         {
+          throw;
           L[k].push_back(CritPoint<T,R>(Infinity,Infinity));
         }
         else
         {
           L[k].push_back(CritPoint<T,R>( (b_+d_) / 2. , (d_-b_) / 2. ));
+          if( (L[k].end()-2)->first == L[k].back().first)
+          {
+            throw std::logic_error("Double X value added");
+          }
           b = b_;
           d = d_;
         }
@@ -390,11 +415,53 @@ PersistenceLandscape<T,R,S>::PersistenceLandscape(std::deque<Interval<T>> A)
     ++k;
   }
   // TODO: think about this, im not sure if this behaves correctly
-  //auto last = std::unique(L.begin(), L.end());
+  //std::unique(L.begin(), L.end());
   //L.erase(last);
   auto result = aleph::utilities::cast_pair(L);
+
+  
   this->X = result.first;
   this->Y = result.second;
+  
+  // assert that nothing went wrong
+  
+  //std::for_each(X.begin(), X.end(), [] (auto l) { return std::for_each(l.begin(),l.end(), [] (auto b) {return b > 0;}); });
+  
+  for (size_t i = 0; i < X.size(); i++)
+  {
+    for (size_t j = (X[i].size()-1); j > 0; j--)
+    {
+      if ((X[i][j] == X[i][j-1]) )//&& (Y[i][j] == Y[i][j-1]))
+      {
+        throw std::logic_error( "double X value at (" 
+                                + std::to_string(X[i][j])
+                                + ","
+                                + std::to_string(Y[i][j])
+                                + ") with index "
+                                + std::to_string(j)
+                                + "in layer "
+                                + std::to_string(i)
+                              );
+       // X[i].erase(X[i].begin() + j);
+       // Y[i].erase(Y[i].begin() + j);
+      }
+      if (Y[i][j] < 0)
+      {
+        throw std::logic_error( "invalid Y value at ("
+                                + std::to_string(X[i][j])
+                                + ","
+                                + std::to_string(Y[i][j])
+                                + ") with index "
+                                + std::to_string(j)
+                                + "in layer "
+                                + std::to_string(i)
+                              );
+      }
+    }
+  }
+  
+  //std::unique(X[k].begin(),X[k].end());
+  //std::unique(Y[k].begin(),Y[k].end());
 }
 
 template <typename T, typename R, typename S>
@@ -430,6 +497,8 @@ PersistenceLandscape<T,R,S>& PersistenceLandscape<T,R,S>::operator= (const Persi
 {
   this->X = other.getX();
   this->Y = other.getY();
+  this->intervalMax = other.getIntervalMax();
+  this->intervalMin = other.getIntervalMin();
   return *this;
 }
 
@@ -495,12 +564,19 @@ PersistenceLandscape<T,R,S>& PersistenceLandscape<T,R,S>::operator*= (const S& s
 template <typename T, typename R, typename S>
 R PersistenceLandscape<T,R,S>::integral (size_t k,double p) const
 {
+  //std::unique(X[k].begin(),X[k].end());
+  //std::unique(Y[k].begin(),Y[k].end());
+  assert (X[k].size() == Y[k].size());
   //std::cout << "layer k is: " << k << std::endl;
   //using aleph::utilities::operator*;
   //using aleph::utilities::operator+=;
   R surface(0);
   for (size_t i = 2; i < X[k].size()-1; i++)
   { //maybe look for problems with numerical stability??
+  //  if (X[k][i] == X[k][i-1]) // extremly dirty fix why does this actually happen?????????? TODO
+  //  {
+  //    continue;
+  //  }
     // steigung:
     R a = (Y[k][i]-Y[k][i-1]) / (X[k][i]-X[k][i-1]); 
     //std::cout<< "a: " << a << std::endl;
@@ -523,6 +599,10 @@ R PersistenceLandscape<T,R,S>::integral (size_t k,double p) const
   if (!std::isfinite(surface))
   {
     throw std::domain_error("integration result is infinity");
+  }
+  else if (surface < 0)
+  {
+    throw std::domain_error("integration result is negative");
   }
   //std::cout<< "surface for k = " << k << ": " << surface << std::endl;
   return surface;
@@ -567,14 +647,26 @@ std::vector<std::vector<T> > PersistenceLandscape<T,R,S>::getY() const
 }
 
 template <typename T, typename R, typename S>
-unsigned PersistenceLandscape<T,R,S>::size() const
+T PersistenceLandscape<T,R,S>::getIntervalMin() const
 {
- // unsigned result = 0;
- // for (unsigned l = 0; l < this->layer(); l++)
+  return this->intervalMin;
+}
+
+template <typename T, typename R, typename S>
+T PersistenceLandscape<T,R,S>::getIntervalMax() const
+{
+  return this->intervalMax;
+}
+
+template <typename T, typename R, typename S>
+size_t PersistenceLandscape<T,R,S>::size() const
+{
+ // size_t result = 0;
+ // for (size_t l = 0; l < this->layer(); l++)
  // {
  //   result += getX()
  // }
-  return std::accumulate(X.begin(), X.end(), unsigned(0), [] (auto a, auto b) { return a + b.size(); });
+  return std::accumulate(X.begin(), X.end(), size_t(0), [] (auto a, auto b) { return a + b.size(); });
 }
 
 template <typename T, typename R, typename S>
