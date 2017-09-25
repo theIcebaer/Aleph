@@ -10,7 +10,11 @@
 #include <cmath>
 #include <vector>
 #include <deque>
+
+#include <stdexcept>
+
 #include <boost/icl/continuous_interval.hpp>
+
 #include <aleph/utilities/ContainerOperators.hh>
 #include <aleph/persistenceDiagrams/PersistenceDiagram.hh>
 
@@ -123,6 +127,7 @@ public:
   std::vector<std::vector<T> > getX() const; // maybe it should return a reference?
   std::vector<std::vector<T> > getY() const; // s.o.
   size_t layer() const;
+  unsigned size() const;
   //void restrictIntervals
   void fileOutput(std::string filename) const;
 };
@@ -236,7 +241,7 @@ std::pair<std::vector<T>, std::vector<R> > PersistenceLandscape<T,R,S>::linComb_
       }
     }
     // encapsule this in tools. accumulate or something
-    std::vector<double> Y(X.size(),0); // = std::accumulate(Y_.begin(), Y_.end(), std::vector<double>(X.size(), 0), [a] (std::vector<double> Y1, std::vector<double> Y2) { return Y1 + a[j]  * Y2
+    std::vector<R> Y(X.size(),0); // = std::accumulate(Y_.begin(), Y_.end(), std::vector<double>(X.size(), 0), [a] (std::vector<double> Y1, std::vector<double> Y2) { return Y1 + a[j]  * Y2
     for (size_t j = 0; j < N; j++)
     { 
       { 
@@ -286,8 +291,8 @@ PersistenceLandscape<T,R,S>::PersistenceLandscape(std::deque<Interval<T>> A)
     // std::cout<< "check 1" << std::endl;
     Interval<T> current = A.front();
     A.pop_front();
-    double b = lower(current); // aufpassen ohne referenz funktioniert es evtl nicht richtig
-    double d = upper(current);
+    T b = lower(current); 
+    T d = upper(current);
     auto p = A.begin();
     if( b == minusInfinity && d == Infinity )
     {
@@ -339,8 +344,8 @@ PersistenceLandscape<T,R,S>::PersistenceLandscape(std::deque<Interval<T>> A)
       }
       else
       {
-        double b_ = p->lower(); //std::cout<< "b_: " << b_<< " "; std::cout<< "b: " << b<< std::endl;
-        double d_ = p->upper(); //std::cout<< "d_: " << d_<< " "; std::cout<< "d: " << d<< std::endl;
+        T b_ = p->lower(); //std::cout<< "b_: " << b_<< " "; std::cout<< "b: " << b<< std::endl;
+        T d_ = p->upper(); //std::cout<< "d_: " << d_<< " "; std::cout<< "d: " << d<< std::endl;
         auto h = p;
         //std::cout<< "h: " << *h << std::endl;
         p = A.erase(h);// evtl: erase p 
@@ -377,13 +382,16 @@ PersistenceLandscape<T,R,S>::PersistenceLandscape(std::deque<Interval<T>> A)
         else
         {
           L[k].push_back(CritPoint<T,R>( (b_+d_) / 2. , (d_-b_) / 2. ));
-          b = b_; // kann nicht wirklich stimmen auf referenzen aufpassen
-          d = d_; // s.o.          
+          b = b_;
+          d = d_;
         }
       }
     }
     ++k;
   }
+  // TODO: think about this, im not sure if this behaves correctly
+  //auto last = std::unique(L.begin(), L.end());
+  //L.erase(last);
   auto result = aleph::utilities::cast_pair(L);
   this->X = result.first;
   this->Y = result.second;
@@ -433,7 +441,7 @@ R PersistenceLandscape<T,R,S>::operator() (size_t k, T t) const
   else if( *xIter <= X[k][1]) { return 0;}
   size_t index = xIter - X[k].begin();
   // linear interpolation
-  double m = (Y[k][index] - Y[k][index - 1]) / (X[k][index] - X[k][index - 1]); // TODO: catch 0 division
+  R m = (Y[k][index] - Y[k][index - 1]) / (X[k][index] - X[k][index - 1]); // TODO: catch 0 division
   return (Y[k][index] - (m * (X[k][index] - t) ));
 }
 
@@ -512,6 +520,10 @@ R PersistenceLandscape<T,R,S>::integral (size_t k,double p) const
       surface += res;
     } // explanation insert
   }
+  if (!std::isfinite(surface))
+  {
+    throw std::domain_error("integration result is infinity");
+  }
   //std::cout<< "surface for k = " << k << ": " << surface << std::endl;
   return surface;
 }
@@ -527,9 +539,14 @@ R PersistenceLandscape<T,R,S>::norm (double p) const
   R surface = R(0);
   for (size_t k = 0; k < X.size(); k++)
   {
-    surface += integral(k, p);
+    surface += integral(k, p); // k layernumber, p norm index     
   }
-  return pow( surface, (1/p) );
+  auto result = pow( surface, (1/p) );
+  if (!std::isfinite(result))
+  {
+    throw std::domain_error("norm result is infinity");
+  }
+  return result;
 }
 
 template <typename T, typename R, typename S>
@@ -547,6 +564,17 @@ template <typename T, typename R, typename S>
 std::vector<std::vector<T> > PersistenceLandscape<T,R,S>::getY() const
 {
   return this->Y;
+}
+
+template <typename T, typename R, typename S>
+unsigned PersistenceLandscape<T,R,S>::size() const
+{
+ // unsigned result = 0;
+ // for (unsigned l = 0; l < this->layer(); l++)
+ // {
+ //   result += getX()
+ // }
+  return std::accumulate(X.begin(), X.end(), unsigned(0), [] (auto a, auto b) { return a + b.size(); });
 }
 
 template <typename T, typename R, typename S>
@@ -581,7 +609,7 @@ R /*__attribute__((optimize("O0")))*/ PersistenceLandscape<T,R,S>::LandscapeLaye
   // linear interpolation
   double m = (outer.Y[k][index] - outer.Y[k][index - 1]) / (outer.X[k][index] - outer.X[k][index - 1]); 
   // TODO: catch 0 division, doesnt happen does it?
-  return (outer.Y[k][index] - (m * (outer.X[k][index] - t) )); 
+  return (static_cast<R>(outer.Y[k][index] - (m * (outer.X[k][index] - t) ))); 
 }
 
 template <typename T, typename R, typename S>

@@ -7,15 +7,17 @@ ADD_EXECUTABLE( persistence_indicator_function_confidence_sets persistence_indic
 ADD_EXECUTABLE( persistence_indicator_function_glyph           persistence_indicator_function_glyph.cc )
 ADD_EXECUTABLE( point_cloud_data_descriptors                   point_cloud_data_descriptors.cc )
 ADD_EXECUTABLE( sparse_adjacency_matrices                      sparse_adjacency_matrices.cc )
+ADD_EXECUTABLE( reddit_graphs                                  reddit_graphs.cc )
 ADD_EXECUTABLE( topological_distance                           topological_distance.cc )
 ADD_EXECUTABLE( wicked_triangulations                          wicked_triangulations.cc )
 
-ENABLE_IF_SUPPORTED( CMAKE_CXX_FLAGS "-O3" )
+ENABLE_IF_SUPPORTED( CMAKE_CXX_FLAGS "-O0" )
 
 # The confidence set calculation requires the availability of generic
 # lambdas.
 SET_SOURCE_FILES_PROPERTIES(
-  persistence_indicator_function_confidence_sets.cc
+  persistence_indicator_function_confidence_sets.cc 
+  reddit_graphs.cc
   PROPERTIES COMPILE_FLAGS "-std=c++14"
 )
 
