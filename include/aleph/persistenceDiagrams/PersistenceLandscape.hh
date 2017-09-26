@@ -109,9 +109,14 @@ private:
   static std::pair<std::vector<T>, std::vector<R> > linComb_singleLayer ( const std::vector<PersistenceLandscape<T,R,S>>& landscapeV, const std::vector<S>& a,const size_t k);
   
 public:
+  // construction algorithm:
+  static std::pair< std::vector<std::vector<T>>, std::vector<std::vector<R>> >
+  constructPersistenceLandscape(std::deque<Interval<T>> queue); //static?
+  
   // constructors:
   PersistenceLandscape ();
-  PersistenceLandscape (std::deque<Interval<T>> A); // Constructor by birth-death pairs  
+  PersistenceLandscape ( std::deque<Interval<T>> A, T intervalMin, T intervalMax); // Constructor by birth-death pairs  
+  PersistenceLandscape ( std::deque<Interval<T>> A); // Constructor by birth-death pairs  
   PersistenceLandscape (const aleph::PersistenceDiagram<T>& diag, T intervalMin, T intervalMax);
   PersistenceLandscape (const aleph::PersistenceDiagram<T>& diag);
   PersistenceLandscape (std::vector<std::vector<T>>, std::vector<std::vector<R>>); // Constructor by already claculated critical points
@@ -288,7 +293,8 @@ PersistenceLandscape<T,R,S>::PersistenceLandscape(const PersistenceLandscape& ot
 
 
 template <typename T, typename R, typename S>
-PersistenceLandscape<T,R,S>::PersistenceLandscape (std::deque<Interval<T>> A) 
+std::pair< std::vector<std::vector<T>>, std::vector<std::vector<R>> >
+PersistenceLandscape<T,R,S>::constructPersistenceLandscape (std::deque<Interval<T>> A) 
 {
   //R MAX = 2000;
   size_t k = 0;
@@ -431,23 +437,23 @@ PersistenceLandscape<T,R,S>::PersistenceLandscape (std::deque<Interval<T>> A)
   auto result = aleph::utilities::cast_pair(L);
 
   
-  this->X = result.first;
-  this->Y = result.second;
+  auto X_ = result.first;
+  auto Y_ = result.second;
   
   // assert that nothing went wrong
   
   //std::for_each(X.begin(), X.end(), [] (auto l) { return std::for_each(l.begin(),l.end(), [] (auto b) {return b > 0;}); });
   
-  for (size_t i = 0; i < X.size(); i++)
+  for (size_t i = 0; i < X_.size(); i++)
   {
-    for (size_t j = (X[i].size()-1); j > 0; j--)
+    for (size_t j = (X_[i].size()-1); j > 0; j--)
     {
-      if ((X[i][j] == X[i][j-1]) )//&& (Y[i][j] == Y[i][j-1]))
+      if ((X_[i][j] == X_[i][j-1]) )//&& (Y[i][j] == Y[i][j-1]))
       {
         throw std::logic_error( "double X value at (" 
-                                + std::to_string(X[i][j])
+                                + std::to_string(X_[i][j])
                                 + ","
-                                + std::to_string(Y[i][j])
+                                + std::to_string(Y_[i][j])
                                 + ") with index "
                                 + std::to_string(j)
                                 + "in layer "
@@ -456,12 +462,12 @@ PersistenceLandscape<T,R,S>::PersistenceLandscape (std::deque<Interval<T>> A)
        // X[i].erase(X[i].begin() + j);
        // Y[i].erase(Y[i].begin() + j);
       }
-      if (Y[i][j] < 0)
+      if (Y_[i][j] < 0)
       {
         throw std::logic_error( "invalid Y value at ("
-                                + std::to_string(X[i][j])
+                                + std::to_string(X_[i][j])
                                 + ","
-                                + std::to_string(Y[i][j])
+                                + std::to_string(Y_[i][j])
                                 + ") with index "
                                 + std::to_string(j)
                                 + "in layer "
@@ -473,7 +479,39 @@ PersistenceLandscape<T,R,S>::PersistenceLandscape (std::deque<Interval<T>> A)
   
   //std::unique(X[k].begin(),X[k].end());
   //std::unique(Y[k].begin(),Y[k].end());
+  return std::make_pair(X_,Y_);
 }
+
+template <typename T, typename R, typename S>
+PersistenceLandscape<T,R,S>::PersistenceLandscape( std::deque<Interval<T>> queue) : PersistenceLandscape<T,R,S>(queue, std::numeric_limits<T>::min(), std::numeric_limits<T>::max())
+{}
+
+template <typename T, typename R, typename S>
+PersistenceLandscape<T,R,S>::PersistenceLandscape( std::deque<Interval<T>> queue, T intervalMin_, T intervalMax_)
+{
+  this->intervalMin = intervalMin_;
+  this->intervalMax = intervalMax_;
+  
+  for( auto& interval : queue )
+  {
+    auto lowerBound = interval.first;
+    auto upperBound = interval.second;
+    if (lowerBound < intervalMin) {
+      lowerBound = intervalMin;
+    }
+    if (upperBound > intervalMax)
+    {
+      upperBound = intervalMax;
+    }
+    interval = Interval<T>(lowerBound, upperBound);
+  }
+  
+  auto XY = constructPersistenceLandscape(queue);
+  this->X = XY.first;
+  this->Y = XY.second;
+}
+
+
 
 template <typename T, typename R, typename S>
 PersistenceLandscape<T,R,S>::PersistenceLandscape( const aleph::PersistenceDiagram<T>& diag) : PersistenceLandscape<T,R,S>(diag, std::numeric_limits<T>::min(), std::numeric_limits<T>::max()) 
@@ -486,7 +524,7 @@ PersistenceLandscape<T,R,S>::PersistenceLandscape( const aleph::PersistenceDiagr
   this->intervalMin = intervalMin_;
   this->intervalMax = intervalMax_;
   
-  std::deque<Interval<T>> queue = {};
+  std::deque<Interval<T>> queue;
   for( auto point : diag )
   {
     auto lowerBound = std::sqrt(2.0) * point.x();
@@ -498,9 +536,17 @@ PersistenceLandscape<T,R,S>::PersistenceLandscape( const aleph::PersistenceDiagr
     {
       upperBound = intervalMax;
     }
+    if (lowerBound >= upperBound)
+    {
+      continue; // TODO Bastian fragen ob das sinn macht.
+    }
     queue.push_back( Interval<T>(lowerBound, upperBound) );
   }
-  *this = PersistenceLandscape(queue);
+  
+  auto XY = constructPersistenceLandscape(queue);
+  this->X = XY.first;
+  this->Y = XY.second;
+
 }
 
 template <typename T, typename R, typename S>

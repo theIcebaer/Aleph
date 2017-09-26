@@ -337,7 +337,7 @@ void __attribute__((optimize("O0")))testPersistenceLandscape()
   D.add( 56, 57);
   
   PersistenceLandscape landscape_from_diag(D,0,115);
-  
+  landscape_from_diag.fileOutput("/tmp/test_diagram_with_equal_points.dat");
   PersistenceDiagram D1;
   
   D1.add(7 , inf); 
@@ -352,6 +352,7 @@ void __attribute__((optimize("O0")))testPersistenceLandscape()
   D1.add(82, inf);
   
   PersistenceLandscape landscape_from_diag1(D1,0,115);
+  
   return;
 }
 
