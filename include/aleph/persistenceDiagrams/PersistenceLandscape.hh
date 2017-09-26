@@ -28,8 +28,19 @@ template<typename T = double, typename R = double>
 using CritPoint = std::pair<T,R>;
 
 template<typename T = double>
-using Interval = boost::icl::continuous_interval<T>; 
+using Interval = std::pair<T,T>;
 
+template<typename T>
+T upper(Interval<T> interval)
+{
+  return interval.second;
+}
+
+template<typename T>
+T lower(Interval<T> interval)
+{
+  return interval.first;
+}
 // Comparing structs
 bool equal (double a, double b, double precision = 1e-04)
 {
@@ -340,7 +351,7 @@ PersistenceLandscape<T,R,S>::PersistenceLandscape (std::deque<Interval<T>> A)
       //std::cout<< "check 2" << std::endl;
       //for (auto it : A ) { std::cout << it << " "; } std::cout << std::endl;
 
-      p = std::find_if(p, A.end(), [d] (auto interval)->bool {return interval.upper() > d;} ); //wsl hier segfault
+      p = std::find_if(p, A.end(), [d] (auto interval)->bool {return upper(interval) > d;} ); //wsl hier segfault
       //std::cout << *p << std::endl;
       if ( p == A.end() )
       {
@@ -349,8 +360,8 @@ PersistenceLandscape<T,R,S>::PersistenceLandscape (std::deque<Interval<T>> A)
       }
       else
       {
-        T b_ = p->lower(); //std::cout<< "b_: " << b_<< " "; std::cout<< "b: " << b<< std::endl;
-        T d_ = p->upper(); //std::cout<< "d_: " << d_<< " "; std::cout<< "d: " << d<< std::endl;
+        T b_ = lower(*p); //std::cout<< "b_: " << b_<< " "; std::cout<< "b: " << b<< std::endl;
+        T d_ = upper(*p); //std::cout<< "d_: " << d_<< " "; std::cout<< "d: " << d<< std::endl;
         auto h = p;
         //std::cout<< "h: " << *h << std::endl;
         p = A.erase(h);// evtl: erase p 
