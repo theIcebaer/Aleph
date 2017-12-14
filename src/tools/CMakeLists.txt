@@ -7,6 +7,7 @@ ADD_EXECUTABLE( persistence_indicator_function_confidence_sets persistence_indic
 ADD_EXECUTABLE( persistence_indicator_function_glyph           persistence_indicator_function_glyph.cc )
 ADD_EXECUTABLE( point_cloud_data_descriptors                   point_cloud_data_descriptors.cc )
 ADD_EXECUTABLE( sparse_adjacency_matrices                      sparse_adjacency_matrices.cc )
+ADD_EXECUTABLE( power_law_graphs                               power_law_graphs.cc )
 ADD_EXECUTABLE( reddit_graphs                                  reddit_graphs.cc )
 ADD_EXECUTABLE( topological_distance                           topological_distance.cc )
 ADD_EXECUTABLE( wicked_triangulations                          wicked_triangulations.cc )
@@ -19,5 +20,10 @@ SET_SOURCE_FILES_PROPERTIES(
   persistence_indicator_function_confidence_sets.cc 
   reddit_graphs.cc
   PROPERTIES COMPILE_FLAGS "-std=c++14"
+)
+
+SET_SOURCE_FILES_PROPERTIES(
+  power_law_graphs.cc
+  PROPERTIES COMPILE_FLAGS "-std=c++14 -lboost_system"
 )
 

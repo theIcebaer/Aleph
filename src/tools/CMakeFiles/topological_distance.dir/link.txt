@@ -1,0 +1,1 @@
+/usr/bin/c++  -Wall -Wconversion -Wextra -Wnon-virtual-dtor -Wold-style-cast -Woverloaded-virtual -pedantic -fopenmp -O0  -rdynamic CMakeFiles/topological_distance.dir/topological_distance.cc.o  -o topological_distance 

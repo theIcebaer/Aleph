@@ -33,6 +33,11 @@
 #include <chrono>
 
 #include <cmath>
+#include <ctime>
+
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <unistd.h>
 
 #include <getopt.h>
 
@@ -45,6 +50,28 @@ using PersistenceDiagram    = aleph::PersistenceDiagram<DataType>;
 using PersistenceLandscape  = aleph::PersistenceLandscape<DataType>;
 
 namespace ch = std::chrono;
+
+auto infty = std::numeric_limits<DataType>::infinity();
+
+
+/*helper function for getting the maximum paired death point of a persistence diagram
+ */
+DataType getMaximumDeath (PersistenceDiagram diag)
+{
+  auto max = DataType(0);
+  for (auto point : diag)
+  {
+    if (point.y() == infty)
+    {
+      continue;
+    }
+    else if (point.y() > max)
+    {
+      max = point.y();
+    }
+  }
+  return max;
+}
 
 
 /**
@@ -62,11 +89,15 @@ PersistenceDiagram createRandomTorusPersistenceDiagram( DataType R, DataType r, 
     aleph::geometry::torusRejectionSampling( R, r, n ),
     R, r
   );
-
+  std::ofstream pointfileTorus;
+  pointfileTorus.open("/home/jens/Uni/data_topology/Project/syntheticResults/samples/torus/sampleTorus.txt");
+  pointfileTorus << pointCloud;
+  pointfileTorus.close();
+  
   aleph::geometry::BruteForce<PointCloud, Distance> bruteForceWrapper( pointCloud );
 
   auto K
-    = aleph::geometry::buildVietorisRipsComplex( bruteForceWrapper, 2 * r, 2 );
+    = aleph::geometry::buildVietorisRipsComplex( bruteForceWrapper,2.5  * r, 2 );
 
   auto diagrams
     = aleph::calculatePersistenceDiagrams( K );
@@ -91,11 +122,15 @@ PersistenceDiagram createRandomSpherePersistenceDiagram( DataType r, unsigned n 
     aleph::geometry::sphereSampling<DataType>( n ),
     r
   );
+  std::ofstream pointfileSphere;
+  pointfileSphere.open("/home/jens/Uni/data_topology/Project/syntheticResults/samples/sphere/sampleSphere.txt");
+  pointfileSphere << pointCloud;
+  pointfileSphere.close();
 
   aleph::geometry::BruteForce<PointCloud, Distance> bruteForceWrapper( pointCloud );
 
   auto K
-    = aleph::geometry::buildVietorisRipsComplex( bruteForceWrapper,  r, 2 );
+    = aleph::geometry::buildVietorisRipsComplex( bruteForceWrapper, 2.5 * r, 2 );
 
   auto diagrams
     = aleph::calculatePersistenceDiagrams( K );
@@ -111,7 +146,7 @@ PersistenceDiagram createRandomSpherePersistenceDiagram( DataType r, unsigned n 
 
 PersistenceLandscape createRandomSpherePersistenceLandscape ( DataType r, unsigned m)
 {
-  PersistenceDiagram diagram = createRandomSpherePersistenceDiagram(r, m);
+  PersistenceDiagram diagram = createRandomSpherePersistenceDiagram( r, m);
   PersistenceLandscape landscape(diagram);
   
   return landscape;
@@ -119,7 +154,7 @@ PersistenceLandscape createRandomSpherePersistenceLandscape ( DataType r, unsign
 
 PersistenceLandscape createRandomTorusPersistenceLandscape ( DataType R, DataType r, unsigned m)
 {
-  PersistenceDiagram diagram = createRandomTorusPersistenceDiagram(R,r,m);
+  PersistenceDiagram diagram = createRandomTorusPersistenceDiagram(r, R,m);
   PersistenceLandscape landscape(diagram);
   
   return landscape;
@@ -128,7 +163,23 @@ PersistenceLandscape createRandomTorusPersistenceLandscape ( DataType R, DataTyp
 int main ( int argc, char** argv )
 {
   
-    
+  // get current timestamp for output folder
+  std::time_t c_time = std::time(nullptr);
+  // creat path for the results directory
+  std::string outputPath = "/home/jens/Uni/data_topology/Project/syntheticResults/" 
+                         + std::to_string(std::asctime(std::localtime(&c_time)));
+  std::string diagramPath = outputPath + "/diagrams";
+  std::string landscapePath = outputPath + "/landscapes";
+  std::string normPath = outputPath + "/norms";
+  std::string samplePath = outputPath + "/samples";
+  
+  // create directorys for results
+  mkdir(outputPath.c_str(), 0700);
+  mkdir(diagramPath.c_str(), 0700);
+  mkdir(landscapePath.c_str(), 0700);
+  mkdir(normPath.c_str(), 0700);
+  mkdir(samplePath.c_str(), 0700);
+  
   static option commandLineOptions[] = {
       { "m"     , required_argument, nullptr, 'm' },
       { "n"     , required_argument, nullptr, 'n' },
@@ -188,41 +239,116 @@ int main ( int argc, char** argv )
 
   std::vector<PersistenceLandscape> landscapeV;
   PersistenceDiagram diagram;
+  PersistenceLandscape landscape;
+
+  std::ofstream normFile;
+  normFile.open(normPath);
 
   for( unsigned i = 0; i < n; i++ )
   {
-    if (sampleFromSphere)
-    {
-      // ch::high_resolution_clock::time_point t1 = ch::high_resolution_clock::now();
+    //if (sampleFromSphere)
+    //{
       diagram = createRandomSpherePersistenceDiagram(r, m);      
+      landscape = PersistenceLandscape(diagram, 0, 4 * getMaximumDeath(diagram));
+
       std::cout<< "betti number in step " << i << ": " << diagram.betti() << std::endl;
-      //diagram.removeUnpaired();
-      // ch::high_resolution_clock::time_point t2 = ch::high_resolution_clock::now();
-      // auto createDiagDuration = ch::duration_cast<ch::milliseconds>(t2 - t1).count();
-      // std::cout << "diagram creation time in step " << i << ": " << createDiagDuration << " ms" << std::endl;
-      // ch::high_resolution_clock::time_point t3 = ch::high_resolution_clock::now();
-      landscapeV.push_back( PersistenceLandscape(diagram, 0, 2*r) );
-      // ch::high_resolution_clock::time_point t4 = ch::high_resolution_clock::now();
-      // auto createLandscapeDuration = ch::duration_cast<ch::microseconds>(t4 - t3).count();
-      // std::cout << "landscape creation time in step " << i << ": " << createLandscapeDuration << " mys" << std::endl;
-    }
+      
+      std::string diagramFileName = diagramPath 
+                                  + "/d_"
+                                  + std::to_string(i)
+                                  + "_"
+                                  + std::to_string(diagram.dimension())
+                                  + ".txt";
+      std::ofstream diagramFile;
+      diagramFile.open(diagramFileName);
+      diagramFile << diagram;
+
+      landscapeV.push_back(landscape);
+      normFile << landscape.norm(2) << std::endl;
+      
+      std::string filename = landscapePath 
+                           + "/l_"
+                           + std::to_string(i)
+                           + "_"
+                           + std::to_string(diagram.dimension())
+                           + ".dat";
+      landscape.fileOutput(filename);
+    //}
+    /*
     else if (sampleFromTorus)
     {
       diagram = createRandomTorusPersistenceDiagram(R, r, m);
+      landscape = PersistenceLandscape(diagram, 0, 4 * getMaximumDeath(diagram));
+      
       std::cout<< "betti number in step " << i << ": " << diagram.betti() << std::endl;
-      //diagram.removeUnpaired();
-      landscapeV.push_back(PersistenceLandscape(diagram, 0, 2 * r));
+      
+      std::string diagramFileName = "/home/jens/Uni/data_topology/Project/syntheticResults/diagrams/d_"
+                                  + std::to_string(i)
+                                  + std::to_string(diagram.dimension())
+                                  + ".txt";
+      std::ofstream diagramFile;
+      diagramFile.open(diagramFileName);
+      diagramFile << diagram;
+
+      landscapeV.push_back(landscape);
+      normFile << landscape.norm(2) << std::endl;
+      
+      std::string filename = landscapePath 
+                           + "/l_"
+                           + std::to_string(i)
+                           + "_"
+                           + std::to_string(diagram.dimension())
+                           + ".dat";
+      landscape.fileOutput(filename);
     }
-    std::stringstream filename;
-    filename << "landscape_" << i << ".dat";
-    PersistenceLandscape(diagram).fileOutput(filename.str());
+    */
   }
   
   // calculate mean landscape from given sample
   auto mean = std::accumulate(landscapeV.begin(), landscapeV.end(), PersistenceLandscape());
   mean *= (1/static_cast<double>(landscapeV.size()));
 
-  mean.fileOutput("mean.dat");
+  std::string object;
+  if (sampleFromSphere)
+  {
+    object = "sphere";
+  }
+  else if(sampleFromTorus)
+  {
+    object = "torus";
+  }
+  auto filename = "/home/jens/Uni/data_topology/Project/syntheticResults/"
+                       + object 
+                       + "/mean_"
+                       + object
+                       + "_r="
+                       + std::to_string(r)
+                       + "_R="
+                       + std::to_string(R)
+                       + "_landscapes="
+                       + std::to_string(n)
+                       + "_points="
+                       + std::to_string(m)
+                       + ".dat";
+  mean.fileOutput(filename);
+  
+  // landscape distance matrix
+  std::vector<std::vector<DataType>> distanceMatrix (n, std::vector<DataType>(n,0));
+
+  // file for distance matrix
+  std::string matrixFilename = "/home/jens/Uni/data_topology/Project/syntheticResults/distanceMatrix.txt";
+  std::ofstream matrixFile(matrixFilename);
+
+  for(size_t i = 0; i < n; i++)
+  {
+    for(size_t j = 0; j < n; j++)
+    {
+      auto difference = landscapeV[i] - landscapeV[j];
+      distanceMatrix[i][j] = difference.norm(2);
+      matrixFile << distanceMatrix[i][j] << " ";
+    }
+    matrixFile << "\n";
+  }
   
   return 0;
 }

@@ -18,6 +18,18 @@ using PersistenceDiagram    = aleph::PersistenceDiagram<DataType>;
 using PersistenceLandscape  = aleph::PersistenceLandscape<>;
 using Interval              = aleph::Interval<double>;
 
+
+
+template<typename T>
+std::ostream& operator<<(std::ostream& os, const std::vector<T>& vec)
+{
+    for (auto& el : vec)
+    {
+        os << el << ' ';
+    }
+    return os;
+}
+
 template <class T> 
 aleph::PersistenceDiagram<T> createRandomPersistenceDiagram( unsigned n )
 {
@@ -293,48 +305,7 @@ void __attribute__((optimize("O0")))testPersistenceLandscape()
   D.add( 1, 5 ); 
   D.add( 1, 8 ); 
   D.add( 1, 57); 
-  D.add( 1, 6 ); 
-  D.add( 1, 7 ); 
-  D.add( 1, 57); 
-  D.add( 1, 57); 
-  D.add( 1, 2 ); 
-  D.add( 1, 10); 
-  D.add( 2, 5 ); 
-  D.add( 2, 6 ); 
-  D.add( 2, 3 ); 
-  D.add( 2, 3 ); 
-  D.add( 2, 5 ); 
-  D.add( 2, 5 ); 
-  D.add( 2, 3 ); 
-  D.add( 2, 8 ); 
-  D.add( 2, 58); 
-  D.add( 2, 6 ); 
-  D.add( 2, 4 ); 
-  D.add( 2, 4 ); 
-  D.add( 2, 5 ); 
-  D.add( 2, 8 ); 
-  D.add( 2, 3 ); 
-  D.add( 2, 4 ); 
-  D.add( 2, 4 ); 
-  D.add( 2, 4 ); 
-  D.add( 2, 3 ); 
-  D.add( 2, 4 ); 
-  D.add( 2, 8 ); 
-  D.add( 3, 5 ); 
-  D.add( 3, 4 ); 
-  D.add( 3, 4 ); 
-  D.add( 3, 4 ); 
-  D.add( 3, 4 ); 
-  D.add( 3, 5 ); 
-  D.add( 3, 5 ); 
-  D.add( 4, 5 ); 
-  D.add( 4, 5 ); 
-  D.add( 6, 7 ); 
-  D.add( 6, 7 );
-  D.add( 6, 7 );
-  D.add( 7, 8 );
-  D.add( 9, 10);
-  D.add( 56, 57);
+
   
   PersistenceLandscape landscape_from_diag(D,0,115);
   landscape_from_diag.fileOutput("/tmp/test_diagram_with_equal_points.dat");
@@ -352,7 +323,17 @@ void __attribute__((optimize("O0")))testPersistenceLandscape()
   D1.add(82, inf);
   
   PersistenceLandscape landscape_from_diag1(D1,0,115);
-  
+
+  // test absolute funktion --------------------------------------------------
+
+  std::vector<std::vector<double>> X = {{-inf, 1.0, 2.0, 4.0, 5.0, 6.0, 8.0, 9.0, inf}, {-inf, 1.5, 2.5, 3.5, 4.5, inf}};
+  std::vector<std::vector<double>> Y = {{ 0.0, 0.0, 1.0,-1.0, 0.0,-1.0, 1.0, 0.0, 0.0}, { 0.0, 0.0,-1.0,-1.0, 0.0, 0.0 }};
+
+  PersistenceLandscape l6 = PersistenceLandscape(X,Y);
+  PersistenceLandscape l7 = aleph::abs(l6);
+
+  assert( l7.getX() == std::vector<std::vector<double>>({{-inf, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, inf}, {-inf, 1.5, 2.5, 3.5, 4.5, inf}}) );
+  assert( l7.getY() == std::vector<std::vector<double>>({{ 0.0, 0.0, 1.0, 0.0, 1.0, 0.0, 1.0, 0.0, 1.0, 0.0, 0.0}, { 0.0, 0.0, 1.0, 1.0, 0.0, 0.0}}) );
   return;
 }
 

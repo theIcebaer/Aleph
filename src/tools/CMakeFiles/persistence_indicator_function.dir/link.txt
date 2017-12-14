@@ -1,0 +1,1 @@
+/usr/bin/c++  -Wall -Wconversion -Wextra -Wnon-virtual-dtor -Wold-style-cast -Woverloaded-virtual -pedantic -fopenmp -O0  -rdynamic CMakeFiles/persistence_indicator_function.dir/persistence_indicator_function.cc.o  -o persistence_indicator_function 

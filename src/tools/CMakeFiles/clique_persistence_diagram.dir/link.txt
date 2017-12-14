@@ -1,0 +1,1 @@
+/usr/bin/c++  -Wall -Wconversion -Wextra -Wnon-virtual-dtor -Wold-style-cast -Woverloaded-virtual -pedantic -fopenmp -O0  -rdynamic CMakeFiles/clique_persistence_diagram.dir/clique_persistence_diagram.cc.o  -o clique_persistence_diagram 

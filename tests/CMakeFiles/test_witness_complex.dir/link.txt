@@ -1,0 +1,1 @@
+/usr/bin/c++  -Wall -Wconversion -Wextra -Wnon-virtual-dtor -Wold-style-cast -Woverloaded-virtual -pedantic -fopenmp -Og -g -Wall -Wextra -Werror -Wconversion -Wnon-virtual-dtor -Wold-style-cast -Woverloaded-virtual -pedantic  -rdynamic CMakeFiles/test_witness_complex.dir/test_witness_complex.cc.o  -o test_witness_complex 

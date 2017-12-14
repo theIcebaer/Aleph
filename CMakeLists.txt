@@ -2,12 +2,12 @@ CMAKE_MINIMUM_REQUIRED( VERSION 2.8.7 )
 PROJECT( Aleph CXX )
 
 IF( CMAKE_MAJOR_VERSION GREATER 3 OR ( CMAKE_MAJOR_VERSION EQUAL 3 AND CMAKE_MINOR_VERSION GREATER 0 ) )
-  SET( CMAKE_CXX_STANDARD 11 )
+  SET( CMAKE_CXX_STANDARD 14 )
   SET( CMAKE_CXX_STANDARD_REQUIRED ON )
 ELSE()
   # This is not the nicest way of activating C++11, but it is guaranteed to
   # work with older versions
-  ADD_DEFINITIONS( "-std=c++11" ) 
+  ADD_DEFINITIONS( "-std=c++14" ) 
 ENDIF()
 
 LIST( APPEND CMAKE_MODULE_PATH
@@ -167,7 +167,7 @@ ENDIF()
 ADD_CUSTOM_TARGET( cppcheck
   COMMAND cppcheck
             --enable=all
-            --std=c++11
+            --std=c++14
             --template "{file},{line},{severity},{message}"
             --verbose
             --project=${CMAKE_CURRENT_SOURCE_DIR}/compile_commands.json

@@ -1,0 +1,1 @@
+/usr/bin/c++  -Wall -Wconversion -Wextra -Wnon-virtual-dtor -Wold-style-cast -Woverloaded-virtual -pedantic -fopenmp -Og -g -Wall -Wextra -Werror -Wconversion -Wnon-virtual-dtor -Wold-style-cast -Woverloaded-virtual -pedantic  -rdynamic CMakeFiles/test_io_lexicographic_triangulation.dir/test_io_lexicographic_triangulation.cc.o  -o test_io_lexicographic_triangulation 

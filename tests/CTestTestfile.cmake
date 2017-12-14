@@ -1,0 +1,37 @@
+# CMake generated Testfile for 
+# Source directory: /home/jens/Uni/data_topology/Aleph/tests
+# Build directory: /home/jens/Uni/data_topology/Aleph/tests
+# 
+# This file includes the relevant testing commands required for 
+# testing this directory and lists subdirectories to be tested as well.
+add_test(barycentric_subdivision "test_barycentric_subdivision")
+add_test(bootstrap "test_bootstrap")
+add_test(boundary_matrix_reduction "test_boundary_matrix_reduction")
+add_test(clique_enumeration "test_clique_enumeration")
+add_test(clique_graph "test_clique_graph")
+add_test(connected_components "test_connected_components")
+add_test(data_descriptors "test_data_descriptors")
+add_test(filesystem "test_filesystem")
+add_test(graph_generation "test_graph_generation")
+add_test(io_functions "test_io_functions")
+add_test(io_gml "test_io_gml")
+add_test(io_hdf5 "test_io_hdf5")
+add_test(io_lexicographic_triangulation "test_io_lexicographic_triangulation")
+add_test(io_pajek "test_io_pajek")
+add_test(io_sparse_adjacency_matrix "test_io_sparse_adjacency_matrix")
+add_test(io_vtk "test_io_vtk")
+add_test(kernel_density_estimator "test_kernel_density_estimator")
+add_test(mesh "test_mesh")
+add_test(munkres "test_munkres")
+add_test(nearest_neighbours "test_nearest_neighbours")
+add_test(persistence_diagrams "test_persistence_diagrams")
+add_test(persistent_homology_complete "test_persistent_homology_complete")
+add_test(persistent_intersection_homology "test_persistent_intersection_homology")
+add_test(persistence_landscape "test_persistence_landscape")
+add_test(principal_component_analysis "test_principal_component_analysis")
+add_test(point_clouds "test_point_clouds")
+add_test(rips_expansion "test_rips_expansion")
+add_test(rips_skeleton "test_rips_skeleton")
+add_test(step_function "test_step_function")
+add_test(union_find "test_union_find")
+add_test(witness_complex "test_witness_complex")

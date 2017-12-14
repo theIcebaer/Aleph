@@ -1,0 +1,1 @@
+/usr/bin/c++  -Wall -Wconversion -Wextra -Wnon-virtual-dtor -Wold-style-cast -Woverloaded-virtual -pedantic -fopenmp -O0  -rdynamic CMakeFiles/clique_communities_to_json.dir/clique_communities_to_json.cc.o  -o clique_communities_to_json 

@@ -1,0 +1,1 @@
+/usr/bin/c++  -Wall -Wconversion -Wextra -Wnon-virtual-dtor -Wold-style-cast -Woverloaded-virtual -pedantic -fopenmp -O0  -rdynamic CMakeFiles/sparse_adjacency_matrices.dir/sparse_adjacency_matrices.cc.o  -o sparse_adjacency_matrices 

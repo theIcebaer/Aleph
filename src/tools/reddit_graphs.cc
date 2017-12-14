@@ -66,9 +66,9 @@ int main( int argc, char** argv )
 
   DataType maxDegree = 0;
   
-  std::vector<SimplicialComplex> testComplexes;
-  std::copy_if(simplicialComplexes.begin(), simplicialComplexes.end(), std::back_inserter(testComplexes), [](SimplicialComplex c){ return c.size() < 300; });
-  simplicialComplexes = testComplexes;
+//  std::vector<SimplicialComplex> testComplexes;
+//  std::copy_if(simplicialComplexes.begin(), simplicialComplexes.end(), std::back_inserter(testComplexes), [](SimplicialComplex c){ return c.size() < 300; });
+//  simplicialComplexes = testComplexes;
   
   std::cerr << "* Calculating degree-based filtration...";
 
@@ -165,7 +165,7 @@ int main( int argc, char** argv )
                            + labels[i]
                            + ".dat";
         std::cout << "label: " << labels[i] << " " << typeid(labels[i]).name() << std::endl;
-        PersistenceLandscape landscape(diagram, 0, maxDegree);
+        PersistenceLandscape landscape(diagram, 0, 2 * maxDegree);
         if (labels[i] == "1")
         {
           landscapes_b[dim].push_back(landscape);

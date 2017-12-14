@@ -1,0 +1,1 @@
+/usr/bin/c++  -Wall -Wconversion -Wextra -Wnon-virtual-dtor -Wold-style-cast -Woverloaded-virtual -pedantic -fopenmp -O3  -rdynamic CMakeFiles/vietoris_rips_eccentricity.dir/vietoris_rips_eccentricity.cc.o  -o vietoris_rips_eccentricity 
