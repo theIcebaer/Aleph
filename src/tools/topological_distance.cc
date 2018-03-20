@@ -44,6 +44,9 @@
 #include <regex>
 #include <string>
 #include <vector>
+#include <chrono>
+#include <ctime>
+#include <iomanip>
 
 #include <cmath>
 
@@ -53,6 +56,7 @@
 
 #include <aleph/persistenceDiagrams/PersistenceDiagram.hh>
 #include <aleph/persistenceDiagrams/PersistenceIndicatorFunction.hh>
+#include <aleph/persistenceDiagrams/PersistenceLandscape.hh>
 
 #include <aleph/persistenceDiagrams/distances/Hausdorff.hh>
 #include <aleph/persistenceDiagrams/distances/Wasserstein.hh>
@@ -65,6 +69,7 @@
 using DataType                     = double;
 using PersistenceDiagram           = aleph::PersistenceDiagram<DataType>;
 using PersistenceIndicatorFunction = aleph::math::StepFunction<DataType>;
+using PersistenceLandscape         = aleph::PersistenceLandscape<DataType>;
 
 /*
   Auxiliary structure for describing a data set. I need this in order to
@@ -241,7 +246,7 @@ double persistenceDiagramDistance( const std::vector<DataSet>& dataSet1,
     d += functor( D1, D2, power );
   }
 
-  d = std::pow( d, 1.0 / power );
+  //d = std::pow( d, 1.0 / power );
   return d;
 }
 
@@ -259,6 +264,7 @@ int main( int argc, char** argv )
     { "normalize"  , no_argument      , nullptr, 'n' },
     { "kernel"     , no_argument      , nullptr, 'k' },
     { "wasserstein", no_argument      , nullptr, 'w' },
+    { "landscape"  , no_argument      , nullptr, 'l' },
     { nullptr      , 0                , nullptr,  0  }
   };
 
@@ -270,6 +276,7 @@ int main( int argc, char** argv )
   bool normalize                    = false;
   bool calculateKernel              = false;
   bool useWassersteinDistance       = false;
+  bool useLandscapeDistance         = false;
 
   int option = 0;
   while( ( option = getopt_long( argc, argv, "p:s:cehinkw", commandLineOptions, nullptr ) ) != -1 )
@@ -291,10 +298,12 @@ int main( int argc, char** argv )
     case 'h':
       useWassersteinDistance       = false;
       useIndicatorFunctionDistance = false;
+      useLandscapeDistance         = false;
       break;
     case 'i':
       useIndicatorFunctionDistance = true;
       useWassersteinDistance       = false;
+      useLandscapeDistance         = false;
       break;
     case 'k':
       calculateKernel = true;
@@ -305,7 +314,12 @@ int main( int argc, char** argv )
     case 'w':
       useIndicatorFunctionDistance = false;
       useWassersteinDistance       = true;
+      useLandscapeDistance         = false;
       break;
+    case 'l':
+      useWassersteinDistance       = false;
+      useIndicatorFunctionDistance = false;
+      useLandscapeDistance         = true;
     default:
       break;
     }
@@ -358,9 +372,10 @@ int main( int argc, char** argv )
         // Check whether the name contains a recognizable prefix and
         // suffix. If not, use the complete filename to identify the
         // data set.
-        if( std::regex_match( filename, matches, reDataSetPrefix ) )
+        if( std::regex_match( filename, matches, reDataSetPrefix ) ){
           name = matches[1];
-
+          //std::cerr << "**** YaY ****\n";
+        }
         if( filenameMap.find( name ) == filenameMap.end() )
           filenameMap[ name ] = index++;
       }
@@ -470,10 +485,17 @@ int main( int argc, char** argv )
                                                                {
                                                                  return aleph::distances::wassersteinDistance( D1, D2, p );
                                                                }
-                                                             : [] ( const PersistenceDiagram& D1, const PersistenceDiagram& D2, double p )
-                                                               {
-                                                                 return std::pow( aleph::distances::hausdorffDistance( D1, D2 ), p );
-                                                               }
+                                                             : useLandscapeDistance ? [] ( const PersistenceDiagram& D1, const PersistenceDiagram& D2, double p )
+                                                                                      {
+                                                                                        //std::cerr << "***YAY-Landscape***\n";
+                                                                                        auto L1 = PersistenceLandscape(D1);
+                                                                                        auto L2 = PersistenceLandscape(D2);
+                                                                                        return (L2-L1).norm(2);
+                                                                                      }
+                                                                                    : [] ( const PersistenceDiagram& D1, const PersistenceDiagram& D2, double p )
+                                                                                      {
+                                                                                        return std::pow( aleph::distances::hausdorffDistance( D1, D2 ), p );
+                                                                                      }
                                     : [] ( const PersistenceDiagram&, const PersistenceDiagram&, double )
                                     {
                                       return 0.0;
@@ -483,8 +505,9 @@ int main( int argc, char** argv )
 
   {
     auto name = useIndicatorFunctionDistance ? "persistence indicator function"
-                                             : useWassersteinDistance ? "Wasserstein"
-                                                                      : "Hausdorff";
+                                             : useWassersteinDistance ? "Wasserstein" 
+                                                                      : useLandscapeDistance ? "Landscape"
+                                                                                             : "Hausdorff";
 
     auto type = calculateKernel ? "kernel values" : "distances";
 
@@ -494,7 +517,11 @@ int main( int argc, char** argv )
 
   std::vector< std::vector<double> > distances;
   distances.resize( dataSets.size(), std::vector<double>( dataSets.size() ) );
-
+  
+  // Measure Performance -----------------------------------------------
+  std::clock_t c_start = std::clock();
+  auto t_start = std::chrono::high_resolution_clock::now();
+  
   #pragma omp parallel for collapse(2)
   for( std::size_t row = 0; row < dataSets.size(); row++ )
   {
@@ -521,6 +548,17 @@ int main( int argc, char** argv )
       distances[col][row] = d;
     }
   }
+  
+  std::clock_t c_end = std::clock();
+  auto t_end = std::chrono::high_resolution_clock::now();
+  
+  std::ofstream performanceFile;
+  performanceFile.open("performance.txt");
+  performanceFile << std::fixed << std::setprecision(6) << "CPU time used: "
+                  << (c_end-c_start) / (CLOCKS_PER_SEC * 60.0) << " m\n"
+                  << "Wall clock time passed: "
+                  << std::to_string(std::chrono::duration<double, std::ratio<60>>(t_end-t_start).count())
+                  << " m\n";
 
   std::cerr << "finished\n";
 

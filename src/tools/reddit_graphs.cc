@@ -31,6 +31,7 @@ int main( int argc, char** argv )
   using Simplex               = aleph::topology::Simplex<DataType, VertexType>;
   using SimplicialComplex     = aleph::topology::SimplicialComplex<Simplex>;
   using PersistenceLandscape  = aleph::PersistenceLandscape<DataType>;
+  using PersistenceDiagram    = aleph::PersistenceDiagram<DataType>;
   
   if( argc <= 1 )
     return -1;
@@ -86,8 +87,8 @@ int main( int argc, char** argv )
                     *std::max_element( degrees.begin(), degrees.end() ) );
     }
 
-    //K = expander.assignMaximumData( K, degrees.begin(), degrees.end() );
-    K = expander.assignData( K, degrees.begin(), degrees.end(), DataType(0), [] ( DataType a, DataType b ) { return a+b; } );
+    K = expander.assignMaximumData( K, degrees.begin(), degrees.end() );
+//  K = expander.assignData( K, degrees.begin(), degrees.end(), DataType(0), [] ( DataType a, DataType b ) { return a+b; } );
     K.sort( aleph::topology::filtrations::Data<Simplex>() );
   }
 
@@ -103,7 +104,7 @@ int main( int argc, char** argv )
     {
       auto filename = "/tmp/"
                       + aleph::utilities::format( i, simplicialComplexes.size() )
-                      + labels[i]
+                      + "_" + labels[i]
                       + ".gml";
 
       std::cerr << "* Storing graph in '" << filename << "'...";
@@ -122,7 +123,6 @@ int main( int argc, char** argv )
     std::vector<std::vector<PersistenceLandscape>> landscapes_a(2);
     std::vector<std::vector<PersistenceLandscape>> landscapes_b(2);
     
-    
 
     for( auto&& K : simplicialComplexes )
     {
@@ -135,8 +135,11 @@ int main( int argc, char** argv )
         = aleph::calculatePersistenceDiagrams( K,
                                                dualize,
                                                includeAllUnpairedCreators );
-      
-      
+      if (diagrams.size() == 1)
+      {
+        diagrams.push_back(PersistenceDiagram());
+        diagrams[1].setDimension(1);
+      }
       for( auto&& diagram : diagrams )
       {
         diagram.removeDiagonal();
@@ -164,7 +167,7 @@ int main( int argc, char** argv )
                            + std::to_string( diagram.dimension() )
                            + labels[i]
                            + ".dat";
-        std::cout << "label: " << labels[i] << " " << typeid(labels[i]).name() << std::endl;
+        // std::cout << "label: " << labels[i] << " " << typeid(labels[i]).name() << std::endl;
         PersistenceLandscape landscape(diagram, 0, 2 * maxDegree);
         if (labels[i] == "1")
         {
@@ -188,54 +191,82 @@ int main( int argc, char** argv )
       std::cout << "landscape with label -1, in dimension 1, has size: " << landscapes_a[1].size() << std::endl;
       std::cout << "landscape with label  1, in dimension 0, has size: " << landscapes_b[0].size() << std::endl;
       std::cout << "landscape with label  1, in dimension 1, has size: " << landscapes_b[1].size() << std::endl;
-      
-      std::sort(landscapes_a[0].begin(), landscapes_a[0].end(), [] (auto a, auto b) { return a.size() < b.size(); });
-      std::sort(landscapes_a[1].begin(), landscapes_a[1].end(), [] (auto a, auto b) { return a.size() < b.size(); });
-      std::sort(landscapes_b[0].begin(), landscapes_b[0].end(), [] (auto a, auto b) { return a.size() < b.size(); });
-      std::sort(landscapes_b[1].begin(), landscapes_b[1].end(), [] (auto a, auto b) { return a.size() < b.size(); });
-      
-      std::transform(landscapes_a[0].begin(), landscapes_a[0].end(), landscapes_a[0].begin(), [] (auto a) { return (a += PersistenceLandscape()) *= 1/a.norm(2); });
-      std::transform(landscapes_a[1].begin(), landscapes_a[1].end(), landscapes_a[1].begin(), [] (auto a) { return (a += PersistenceLandscape()) *= 1/a.norm(2); });
-      std::transform(landscapes_b[0].begin(), landscapes_b[0].end(), landscapes_b[0].begin(), [] (auto a) { return (a += PersistenceLandscape()) *= 1/a.norm(2); });
-      std::transform(landscapes_b[1].begin(), landscapes_b[1].end(), landscapes_b[1].begin(), [] (auto a) { return (a += PersistenceLandscape()) *= 1/a.norm(2); });
-      
-      auto mean_a_0 = std::accumulate(landscapes_a[0].begin(), landscapes_a[0].end(), PersistenceLandscape());
-      mean_a_0 *= (1/static_cast<double>(landscapes_a[0].size()));
-
-      std::cout << "calculated mean from label -1 data in dimension 0" << std::endl;
-      
-      auto mean_a_1 = std::accumulate(landscapes_a[1].begin(), landscapes_a[1].end(), PersistenceLandscape());
-      mean_a_1 *= (1/static_cast<double>(landscapes_a[1].size()));
-
-      std::cout << "calculated mean from label -1 data in dimension 1" << std::endl;
-      
-      auto mean_b_0 = std::accumulate(landscapes_b[0].begin(), landscapes_b[0].end(), PersistenceLandscape());
-      mean_b_0 *= (1/static_cast<double>(landscapes_b[0].size()));
-
-      std::cout << "calculated mean from label 1 data in dimension 0" << std::endl;
-      
-      auto mean_b_1 = std::accumulate(landscapes_b[1].begin(), landscapes_b[1].end(), PersistenceLandscape());
-      mean_b_1 *= (1/static_cast<double>(landscapes_b[1].size()));
-      
-      std::cout << "calculated mean from label 1 data in dimension 1" << std::endl;
-      
-      // write means to /tmp/
-      
-      auto mean_a_0_File = "/tmp/mean_a_0.dat";
-      auto mean_a_1_File = "/tmp/mean_a_1.dat";
-      auto mean_b_0_File = "/tmp/mean_b_0.dat";
-      auto mean_b_1_File = "/tmp/mean_b_1.dat";
-
-      mean_a_0.fileOutput(mean_a_0_File);
-      std::cout << "wrote mean a to" << mean_a_0_File << std::endl;
-      mean_a_1.fileOutput(mean_a_1_File);
-      std::cout << "wrote mean a to" << mean_a_1_File << std::endl;
-      mean_b_0.fileOutput(mean_b_0_File);
-      std::cout << "wrote mean a to" << mean_a_0_File << std::endl;
-      mean_b_1.fileOutput(mean_b_1_File);
-      std::cout << "wrote mean a to" << mean_a_1_File << std::endl;
+//      
+//      std::sort(landscapes_a[0].begin(), landscapes_a[0].end(), [] (auto a, auto b) { return a.size() < b.size(); });
+//      std::sort(landscapes_a[1].begin(), landscapes_a[1].end(), [] (auto a, auto b) { return a.size() < b.size(); });
+//      std::sort(landscapes_b[0].begin(), landscapes_b[0].end(), [] (auto a, auto b) { return a.size() < b.size(); });
+//      std::sort(landscapes_b[1].begin(), landscapes_b[1].end(), [] (auto a, auto b) { return a.size() < b.size(); });
+//      
+//      std::transform(landscapes_a[0].begin(), landscapes_a[0].end(), landscapes_a[0].begin(), [] (auto a) { return (a += PersistenceLandscape()) *= 1/a.norm(2); });
+//      std::transform(landscapes_a[1].begin(), landscapes_a[1].end(), landscapes_a[1].begin(), [] (auto a) { return (a += PersistenceLandscape()) *= 1/a.norm(2); });
+//      std::transform(landscapes_b[0].begin(), landscapes_b[0].end(), landscapes_b[0].begin(), [] (auto a) { return (a += PersistenceLandscape()) *= 1/a.norm(2); });
+//      std::transform(landscapes_b[1].begin(), landscapes_b[1].end(), landscapes_b[1].begin(), [] (auto a) { return (a += PersistenceLandscape()) *= 1/a.norm(2); });
+//      
+//      std::cout << "calculating mean from label -1 data in dimenion 0" << std::endl;
+//      
+//      auto mean_a_0 = std::accumulate(landscapes_a[0].begin(), landscapes_a[0].end(), PersistenceLandscape());
+//      mean_a_0 *= (1/static_cast<double>(landscapes_a[0].size()));
+//
+//      std::cout << "calculated mean from label -1 data in dimension 0" << std::endl;
+//      std::cout << "calculating mean from label -1 data in dimenion 1" << std::endl;
+//      
+//      auto mean_a_1 = std::accumulate(landscapes_a[1].begin(), landscapes_a[1].end(), PersistenceLandscape());
+//      mean_a_1 *= (1/static_cast<double>(landscapes_a[1].size()));
+//
+//      std::cout << "calculated mean from label -1 data in dimension 1" << std::endl;
+//      std::cout << "calculating mean from label 1 data in dimenion 0" << std::endl;
+//      
+//      auto mean_b_0 = std::accumulate(landscapes_b[0].begin(), landscapes_b[0].end(), PersistenceLandscape());
+//      mean_b_0 *= (1/static_cast<double>(landscapes_b[0].size()));
+//
+//      std::cout << "calculated mean from label 1 data in dimension 0" << std::endl;
+//      std::cout << "calculating mean from label 1 data in dimenion 1" << std::endl;
+//
+//      auto mean_b_1 = std::accumulate(landscapes_b[1].begin(), landscapes_b[1].end(), PersistenceLandscape());
+//      mean_b_1 *= (1/static_cast<double>(landscapes_b[1].size()));
+//      
+//      std::cout << "calculated mean from label 1 data in dimension 1" << std::endl;
+//      
+//       write means to /tmp/
+//      
+//      auto mean_a_0_File = "/tmp/mean_a_0.dat";
+//      auto mean_a_1_File = "/tmp/mean_a_1.dat";
+//      auto mean_b_0_File = "/tmp/mean_b_0.dat";
+//      auto mean_b_1_File = "/tmp/mean_b_1.dat";
+//
+//      mean_a_0.fileOutput(mean_a_0_File);
+//      std::cout << "wrote mean a to" << mean_a_0_File << std::endl;
+//      mean_a_1.fileOutput(mean_a_1_File);
+//      std::cout << "wrote mean a to" << mean_a_1_File << std::endl;
+//      mean_b_0.fileOutput(mean_b_0_File);
+//      std::cout << "wrote mean a to" << mean_a_0_File << std::endl;
+//      mean_b_1.fileOutput(mean_b_1_File);
+//      std::cout << "wrote mean a to" << mean_a_1_File << std::endl;
+//  
+//  // distance Matrix in dimension 0
+//  std::cout << "calculating distance matrix" << std::endl;
+//  
+//  auto concatenated = landscapes_a[0];
+//  concatenated.insert(concatenated.end(), landscapes_b[0].begin(), landscapes_b[0].end() );
+//  size_t n = concatenated.size();
+//  
+//  std::vector<std::vector<DataType>> distanceMatrix (n, std::vector<DataType>(n,0));
+//  
+//  std::string matrixFilename = "/tmp/distanceMatrix.txt";
+//  std::ofstream matrixFile(matrixFilename);
+//  
+//  for (size_t i; i < concatenated.size(); i++)
+//  {
+//    for (size_t j; j < concatenated.size(); j++)
+//    {
+//      auto difference = concatenated[i] - concatenated[j];
+//      distanceMatrix[i][j] = difference.norm(2);
+//      matrixFile << distanceMatrix[i][j] << " ";
+//    }
+//    matrixFile << "\n";
+//  }
+  
   }
-
   // Store labels ------------------------------------------------------
 
   {

@@ -41,10 +41,14 @@
 
 #include <aleph/persistentHomology/Calculation.hh>
 
+#include <aleph/persistenceDiagrams/PersistenceLandscape.hh>
+
 #include <aleph/topology/Simplex.hh>
 #include <aleph/topology/SimplicialComplex.hh>
 
 #include <aleph/topology/filtrations/Data.hh>
+#include <aleph/topology/filtrations/Degree.hh>
+
 
 #include <aleph/utilities/Filesystem.hh>
 #include <aleph/utilities/Format.hh>
@@ -60,6 +64,15 @@
 #include <vector>
 
 #include <getopt.h>
+
+using DataType              = double;
+using VertexType            = unsigned;
+using PersistenceLandscape  = aleph::PersistenceLandscape<DataType>;
+using PersistenceDiagram    = aleph::PersistenceDiagram<DataType>;
+
+auto infty = std::numeric_limits<DataType>::infinity();
+
+
 
 void usage()
 {
@@ -97,6 +110,24 @@ void usage()
             << "\n";
 }
 
+//TODO: insert this into Diagram or as a free function into a seperate namespace
+DataType getMaximumDeath (PersistenceDiagram diag)
+{
+  auto max = DataType(0);
+  for (auto point : diag)
+  {
+    if (point.y() == infty)
+    {
+      continue;
+    }
+    else if (point.y() > max)
+    {
+      max = point.y();
+    }
+  }
+  return max;
+}
+
 int main( int argc, char** argv )
 {
   // We have to specify the required data type and vertex type for the
@@ -105,8 +136,11 @@ int main( int argc, char** argv )
   // can of course change it here. Likewise, if your simplicial complex
   // is very small, you could use `short` instead of `unsigned` to
   // represent all possible values for vertices.
-  using DataType          = double;
-  using VertexType        = unsigned;
+  bool invertWeights       = false;
+  bool normalize           = false;
+  bool calculateLandscapes = false;
+  DataType infinity        = std::numeric_limits<DataType>::has_infinity ? std::numeric_limits<DataType>::infinity() : std::numeric_limits<DataType>::max();
+  std::string basePath     = std::string();
 
   static option commandLineOptions[] =
   {
@@ -118,11 +152,7 @@ int main( int argc, char** argv )
     { nullptr         , 0                , nullptr,  0  }
   };
 
-  bool invertWeights       = false;
-  bool normalize           = false;
-  bool calculateLandscapes = false;
-  DataType infinity        = std::numeric_limits<DataType>::has_infinity ? std::numeric_limits<DataType>::infinity() : std::numeric_limits<DataType>::max();
-  std::string basePath     = std::string();
+
 
   {
     int option = 0;
@@ -284,18 +314,36 @@ int main( int argc, char** argv )
   // simplices with highest dimension are the 1-simplices, i.e. the
   // edges. If the user specified an optional parameter, we use it.
   unsigned k = 1;
+  DataType maxDegree = 0;
 
   if( argc - optind > 0 )
     k = static_cast<unsigned>( std::stoul( argv[optind++] ) );
 
-  aleph::geometry::RipsExpander<SimplicialComplex> ripsExpander;
-  K = ripsExpander( K, k );
+  aleph::geometry::RipsExpander<SimplicialComplex> expander;
 
   // This tells the expander to use the maximum weight of the faces of
   // a simplex in order to assign the weight of the simplex. Thus, the
   // simplicial complex models a sublevel set filtration after sorting
   // it with the appropriate functor.
-  K = ripsExpander.assignMaximumWeight( K );
+  
+ std::vector<DataType> degrees;
+ aleph::topology::filtrations::degrees( K, std::back_inserter( degrees ) );
+
+ if( !degrees.empty() )
+ {
+   maxDegree
+     = std::max( maxDegree,
+                 *std::max_element( degrees.begin(), degrees.end() ) );
+ }
+ std::cout << "degrees" << std::endl;
+ //for (auto d : degrees)
+ //{
+ // std::cout << "\t - " << d << "\n";
+ //}
+ // degree filtration
+ K = expander.assignMaximumData( K, degrees.begin(), degrees.end() );
+ //degree sum filtration
+ //K = expander.assignData( K, degrees.begin(), degrees.end(), DataType(0), [] ( DataType a, DataType b ) { return a+b; } );
 
   std::cerr << "...finished\n"
             << "* Expanded complex has dimension " << K.dimension() << "\n"
@@ -324,9 +372,14 @@ int main( int argc, char** argv )
 
   std::cerr << "* Calculating persistent homology...";
 
+  //auto diagrams
+  //  = aleph::calculatePersistenceDiagrams( K );
+  
+  bool dualize                    = true;
+  bool includeAllUnpairedCreators = true;
+  
   auto diagrams
-    = aleph::calculatePersistenceDiagrams( K );
-
+    = aleph::calculatePersistenceDiagrams( K, dualize, includeAllUnpairedCreators );
   std::cerr << "...finished\n";
 
   for( auto&& D : diagrams )
@@ -339,7 +392,6 @@ int main( int argc, char** argv )
     {
       std::cerr << "* Transforming unpaired points in persistence diagram with a factor of " << infinity << "...\n";
 
-      using PersistenceDiagram = aleph::PersistenceDiagram<DataType>;
 
       std::transform( D.begin(), D.end(), D.begin(),
           [&maxWeight, &infinity] ( const PersistenceDiagram::Point& p )
@@ -353,7 +405,8 @@ int main( int argc, char** argv )
 
     if( calculateLandscapes )
     {
-      auto landscape = PersistenceLandscape(D);
+      auto max = getMaximumDeath(D);
+      auto landscape = PersistenceLandscape(D,0, 4 * max);
     }
 
     std::ostringstream stream;

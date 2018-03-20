@@ -32,6 +32,7 @@
 #include <sstream>
 #include <algorithm>
 #include <chrono>
+#include <ctime>
 #include <stdexcept>
 
 #include <cmath>
@@ -52,7 +53,6 @@ using PersistenceLandscape  = aleph::PersistenceLandscape<DataType>;
 
 auto infty = std::numeric_limits<DataType>::infinity();
 
-namespace ch = std::chrono;
 
 DataType getMaximumDeath (PersistenceDiagram diag)
 {
@@ -82,7 +82,7 @@ DataType getMaximumDeath (PersistenceDiagram diag)
 int main ( int argc, char** argv )
 {
   std::vector<std::string> filenames;
-  if (argc >=1)
+  if (argc > 2)
   {
     filenames.assign(argv + 1, argv + argc);
   }
@@ -113,7 +113,8 @@ int main ( int argc, char** argv )
 
     std::cout<< " - loading persistence diagram " << i << " with  betti number: " << diagram.betti() << " and " << diagram.size() << " points"<< std::endl;
 
-    PersistenceLandscape landsc = PersistenceLandscape(diagram, 0, 4 * max);
+    //PersistenceLandscape landsc = PersistenceLandscape(diagram, 0, 4 * max);
+    PersistenceLandscape landsc = PersistenceLandscape(diagram);
     landscapeV.push_back(landsc);
     
     //std::string filename = "/home/jens/Uni/data_topology/Project/syntheticResults/landscapesFromfixedSample/landscape_"
@@ -122,8 +123,6 @@ int main ( int argc, char** argv )
                          + ".dat";
     //filename << "landscape_" << i << ".dat";
     landsc.fileOutput(filename);
-    
-    
     //
     //  + std::to_string(i) + ".dat");
     //normout << PersistenceLandscape(diagram, 0, 4 * max).norm(2) << std::endl;
@@ -167,29 +166,45 @@ int main ( int argc, char** argv )
                        + ".dat"
   mean.fileOutput(filename);
   */
-  /*
+
   // calculate landscape distance matrix
   std::vector<std::vector<DataType>> distanceMatrix (n,std::vector<DataType>(n,0));
 
   // File output for distance matrix
-  std::string filename = "reddit_distances.txt";
+  std::string filename = "distances.txt";
 
   std::ofstream matrixFile;
   matrixFile.open(filename);
   std::cerr<< "calculating distance matrix..." << std::endl;
   // calculate parallel
+  
+  std::clock_t c_start = std::clock();
+  auto t_start = std::chrono::high_resolution_clock::now();
+  unsigned actionCounter = 0;
+  
   #pragma omp parallel for collapse(2)
   for(size_t i = 0; i < n; ++i)
   {
-    
     for(size_t j = 0; j < n; ++j)
     {
+      actionCounter++;
       auto difference = landscapeV[i] - landscapeV[j];
       distanceMatrix[i][j] = difference.norm(2);
-      std::cout << "("<< i << "," << j<< ") \n"; 
+      std::cout << " * " <<static_cast<double>(actionCounter) / static_cast<double>(n*n) << " \n"; 
     }
   }
-
+  
+  std::clock_t c_end = std::clock();
+  auto t_end = std::chrono::high_resolution_clock::now();
+  
+  std::ofstream performanceFile;
+  performanceFile.open("performance.txt");
+  performanceFile << std::fixed << std::setprecision(2) << "CPU time used: "
+                  << (c_end-c_start) / (CLOCKS_PER_SEC * 60.0) << " m\n"
+                  << "Wall clock time passed: "
+                  << std::to_string(std::chrono::duration<double, std::ratio<60>>(t_end-t_start).count())
+                  << " m\n";
+  
   // fill not jet set entrys
   for(size_t i = 0; i < n; i++)
   {
@@ -212,7 +227,7 @@ int main ( int argc, char** argv )
     }
     matrixFile << "\n";
   }
-  */
+  
 
   
   return 0;

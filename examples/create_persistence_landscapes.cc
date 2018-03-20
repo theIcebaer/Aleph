@@ -83,21 +83,21 @@ DataType getMaximumDeath (PersistenceDiagram diag)
   the function will automatically handle Vietoris--Rips expansion.
 */
 
-PersistenceDiagram createRandomTorusPersistenceDiagram( DataType R, DataType r, unsigned n )
+PersistenceDiagram createRandomTorusPersistenceDiagram( DataType R, DataType r, unsigned n, std::string samplePath, unsigned iteration, DataType e = DataType(1) )
 {
   auto pointCloud = aleph::geometry::makeTorus(
     aleph::geometry::torusRejectionSampling( R, r, n ),
     R, r
   );
-  std::ofstream pointfileTorus;
-  pointfileTorus.open("/home/jens/Uni/data_topology/Project/syntheticResults/samples/torus/sampleTorus.txt");
-  pointfileTorus << pointCloud;
-  pointfileTorus.close();
+  std::ofstream pointfileSphere;
+  pointfileSphere.open(samplePath + "/sample_" + std::to_string(iteration) + ".txt");
+  pointfileSphere << pointCloud;
+  pointfileSphere.close();
   
   aleph::geometry::BruteForce<PointCloud, Distance> bruteForceWrapper( pointCloud );
 
   auto K
-    = aleph::geometry::buildVietorisRipsComplex( bruteForceWrapper,2.5  * r, 2 );
+    = aleph::geometry::buildVietorisRipsComplex( bruteForceWrapper, e  * r, 2 );
 
   auto diagrams
     = aleph::calculatePersistenceDiagrams( K );
@@ -116,21 +116,21 @@ PersistenceDiagram createRandomTorusPersistenceDiagram( DataType R, DataType r, 
   expansion.
 */
 
-PersistenceDiagram createRandomSpherePersistenceDiagram( DataType r, unsigned n )
+PersistenceDiagram createRandomSpherePersistenceDiagram( DataType r, unsigned n,std::string samplePath, unsigned iteration, DataType e = DataType(1))
 {
   auto pointCloud = aleph::geometry::makeSphere(
     aleph::geometry::sphereSampling<DataType>( n ),
     r
   );
   std::ofstream pointfileSphere;
-  pointfileSphere.open("/home/jens/Uni/data_topology/Project/syntheticResults/samples/sphere/sampleSphere.txt");
+  pointfileSphere.open(samplePath + "/sample_" + std::to_string(iteration) + ".txt");
   pointfileSphere << pointCloud;
   pointfileSphere.close();
 
   aleph::geometry::BruteForce<PointCloud, Distance> bruteForceWrapper( pointCloud );
 
   auto K
-    = aleph::geometry::buildVietorisRipsComplex( bruteForceWrapper, 2.5 * r, 2 );
+    = aleph::geometry::buildVietorisRipsComplex( bruteForceWrapper, e * r, 2 );
 
   auto diagrams
     = aleph::calculatePersistenceDiagrams( K );
@@ -143,7 +143,7 @@ PersistenceDiagram createRandomSpherePersistenceDiagram( DataType r, unsigned n 
 }
 
 
-
+/*
 PersistenceLandscape createRandomSpherePersistenceLandscape ( DataType r, unsigned m)
 {
   PersistenceDiagram diagram = createRandomSpherePersistenceDiagram( r, m);
@@ -159,6 +159,7 @@ PersistenceLandscape createRandomTorusPersistenceLandscape ( DataType R, DataTyp
   
   return landscape;
 }
+*/
 
 int main ( int argc, char** argv )
 {
@@ -166,18 +167,19 @@ int main ( int argc, char** argv )
   // get current timestamp for output folder
   std::time_t c_time = std::time(nullptr);
   // creat path for the results directory
+  std::string timestamp = std::string(std::asctime(std::localtime(&c_time)));
   std::string outputPath = "/home/jens/Uni/data_topology/Project/syntheticResults/" 
-                         + std::to_string(std::asctime(std::localtime(&c_time)));
+                         + timestamp.substr(0, timestamp.size()-1);
   std::string diagramPath = outputPath + "/diagrams";
   std::string landscapePath = outputPath + "/landscapes";
-  std::string normPath = outputPath + "/norms";
+  std::string normPath = outputPath + "/norms.txt";
   std::string samplePath = outputPath + "/samples";
   
   // create directorys for results
   mkdir(outputPath.c_str(), 0700);
   mkdir(diagramPath.c_str(), 0700);
   mkdir(landscapePath.c_str(), 0700);
-  mkdir(normPath.c_str(), 0700);
+  //mkdir(normPath.c_str(), 0700);
   mkdir(samplePath.c_str(), 0700);
   
   static option commandLineOptions[] = {
@@ -185,6 +187,8 @@ int main ( int argc, char** argv )
       { "n"     , required_argument, nullptr, 'n' },
       { "R"     , required_argument, nullptr, 'R' },
       { "r"     , required_argument, nullptr, 'r' },
+      { "e"     , required_argument, nullptr, 'e' },
+      { "c"     , required_argument, nullptr, 'c' },
       { "sphere", no_argument      , nullptr, 's' },
       { "torus" , no_argument      , nullptr, 't' },
       { nullptr , 0                , nullptr,  0  }
@@ -195,12 +199,14 @@ int main ( int argc, char** argv )
   unsigned n           = 50;
   DataType R           = DataType(0.25);
   DataType r           = DataType(0.50);
+  DataType e           = DataType(2.0);
+  DataType c           = DataType(2.0);
 
   bool sampleFromSphere = false;
   bool sampleFromTorus  = false;
 
   int option = 0;
-  while( ( option = getopt_long( argc, argv, "m:n:R:r:t", commandLineOptions, nullptr ) ) != -1 )
+  while( ( option = getopt_long( argc, argv, "m:n:R:r:t:e:c", commandLineOptions, nullptr ) ) != -1 )
   {
     switch( option )
     {
@@ -224,6 +230,12 @@ int main ( int argc, char** argv )
       sampleFromSphere = false;
       sampleFromTorus  = true;
       break;
+    case 'e':
+      e = static_cast<DataType>( std::stod(optarg) );
+      break;
+    case 'c':
+      c = static_cast<DataType>( std::stod(optarg) );
+      break;
     default:
       break;
     }
@@ -246,10 +258,17 @@ int main ( int argc, char** argv )
 
   for( unsigned i = 0; i < n; i++ )
   {
-    //if (sampleFromSphere)
-    //{
-      diagram = createRandomSpherePersistenceDiagram(r, m);      
-      landscape = PersistenceLandscape(diagram, 0, 4 * getMaximumDeath(diagram));
+    if (sampleFromSphere)
+    {
+      
+      diagram = createRandomSpherePersistenceDiagram(r, m, samplePath,i, e);      
+    }
+    else if (sampleFromTorus)
+    {
+      diagram = createRandomTorusPersistenceDiagram(R, r, m, samplePath,i, e);
+    }
+      
+      landscape = PersistenceLandscape(diagram, 0, c * getMaximumDeath(diagram));
 
       std::cout<< "betti number in step " << i << ": " << diagram.betti() << std::endl;
       
@@ -317,21 +336,33 @@ int main ( int argc, char** argv )
   {
     object = "torus";
   }
-  auto filename = "/home/jens/Uni/data_topology/Project/syntheticResults/"
-                       + object 
-                       + "/mean_"
-                       + object
-                       + "_r="
-                       + std::to_string(r)
-                       + "_R="
-                       + std::to_string(R)
-                       + "_landscapes="
-                       + std::to_string(n)
-                       + "_points="
-                       + std::to_string(m)
-                       + ".dat";
+  auto filename = outputPath + "/mean.dat";
   mean.fileOutput(filename);
   
+  // create file containing configuration parameters
+  
+  auto parameterPath = outputPath + "/parameters.txt";
+  std::ofstream parameterFile;
+  parameterFile.open(parameterPath);
+  parameterFile << "Number of points per sample m=" << m << "\n";
+  parameterFile << "Number of samples n=" << n << "\n";
+  parameterFile << "Object=" << object << "\n";
+  if (sampleFromSphere)
+  {
+    parameterFile << "Radius r=" << r << "\n";
+  }
+  else if (sampleFromTorus)
+  {
+    parameterFile << "Inner Radius R=" << R << "\n";
+    parameterFile << "Outer Radius r=" << r << "\n";
+
+  }
+  parameterFile << "ExpansionFactor e=" << e << "\n";
+  parameterFile << "Factor for cutting the persistence of unhandeled points c=" << c << "\n";
+  
+  
+  /*
+
   // landscape distance matrix
   std::vector<std::vector<DataType>> distanceMatrix (n, std::vector<DataType>(n,0));
 
@@ -349,6 +380,8 @@ int main ( int argc, char** argv )
     }
     matrixFile << "\n";
   }
+  
+  */
   
   return 0;
 }

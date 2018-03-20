@@ -38,10 +38,6 @@
 
 #include <getopt.h>
 
-#include <omp.h>
-#include <stdio.h>
-#include <stdlib.h>
-
 // We first have to specify the data type of the persistence diagram,
 // i.e. the type that is used by its individual points.
 using DataType              = double;
@@ -68,13 +64,6 @@ DataType getMaximumDeath (PersistenceDiagram diag)
       max = point.y();
     }
   }
-  if (max == 0)
-  {
-    for (auto point : diag)
-    {
-      max = std::max(max,point.x());
-    }
-  }
   return max;
 }
 
@@ -82,7 +71,7 @@ DataType getMaximumDeath (PersistenceDiagram diag)
 int main ( int argc, char** argv )
 {
   std::vector<std::string> filenames;
-  if (argc >=1)
+  if (argc > 2)
   {
     filenames.assign(argv + 1, argv + argc);
   }
@@ -102,8 +91,8 @@ int main ( int argc, char** argv )
 
   std::vector<PersistenceLandscape> landscapeV;
   
-  //std::ofstream normout;
-  //normout.open("/home/jens/Uni/data_topology/Project/syntheticResults/plots/data/norm.dat");
+  std::ofstream normout;
+  normout.open("/home/jens/Uni/data_topology/Project/syntheticResults/landscapeNorms/norm.dat");
   
   for( unsigned i = 0; i < n; i++ )
   {
@@ -111,32 +100,25 @@ int main ( int argc, char** argv )
 
     auto max = getMaximumDeath(diagram);
 
-    std::cout<< " - loading persistence diagram " << i << " with  betti number: " << diagram.betti() << " and " << diagram.size() << " points"<< std::endl;
+    std::cout<< " - loading persistence diagram " << i << " with  betti number: " << diagram.betti() << std::endl;
 
     PersistenceLandscape landsc = PersistenceLandscape(diagram, 0, 4 * max);
     landscapeV.push_back(landsc);
     
-    //std::string filename = "/home/jens/Uni/data_topology/Project/syntheticResults/landscapesFromfixedSample/landscape_"
-    std::string filename = "/tmp/landscape_"
+    std::string filename = "/home/jens/Uni/data_topology/Project/syntheticResults/landscapesFromfixedSample/landscape_"
                          + std::to_string(i)
                          + ".dat";
     //filename << "landscape_" << i << ".dat";
     landsc.fileOutput(filename);
     
-    
-    //
     //  + std::to_string(i) + ".dat");
-    //normout << PersistenceLandscape(diagram, 0, 4 * max).norm(2) << std::endl;
+    normout << PersistenceLandscape(diagram, 0, 4 * max).norm(2) << std::endl;
   }
   //PersistenceLandscape mean = std::accumulate(landscapeV.begin(), landscapeV.end(), PersistenceLandscape());
-  //auto mean_1 = std::accumulate(landscapeV.begin(), landscapeV.begin()+(int(n/2)), PersistenceLandscape());
-  //auto mean_2 = std::accumulate(landscapeV.begin()+(int(n/2)), landscapeV.end(), PersistenceLandscape());
+  auto mean = std::accumulate(landscapeV.begin(), landscapeV.end(), PersistenceLandscape());
+  mean *= (1/static_cast<double>(landscapeV.size()));
 
-  //mean_1 *= (1/static_cast<double>(landscapeV.size()/2));
-  //mean_2 *= (1/static_cast<double>(landscapeV.size()/2));
-
-  //mean_1.fileOutput("/home/jens/Uni/data_topology/Project/syntheticResults/plots/data/mean_800_torus.dat");
-  //mean_2.fileOutput("/home/jens/Uni/data_topology/Project/syntheticResults/plots/data/mean_800_sphere.dat");
+  mean.fileOutput("/home/jens/Uni/data_topology/Project/syntheticResults/landscapesFromfixedSample/mean.dat");
 
   /*
   std::cerr << "* calculating mean landscape" << "\n";
@@ -167,53 +149,27 @@ int main ( int argc, char** argv )
                        + ".dat"
   mean.fileOutput(filename);
   */
-  /*
+
   // calculate landscape distance matrix
   std::vector<std::vector<DataType>> distanceMatrix (n,std::vector<DataType>(n,0));
 
   // File output for distance matrix
-  std::string filename = "reddit_distances.txt";
+  std::string filename = "landscapeDistanceMatrix.dat";
 
   std::ofstream matrixFile;
   matrixFile.open(filename);
-  std::cerr<< "calculating distance matrix..." << std::endl;
-  // calculate parallel
-  #pragma omp parallel for collapse(2)
-  for(size_t i = 0; i < n; ++i)
-  {
-    
-    for(size_t j = 0; j < n; ++j)
-    {
-      auto difference = landscapeV[i] - landscapeV[j];
-      distanceMatrix[i][j] = difference.norm(2);
-      std::cout << "("<< i << "," << j<< ") \n"; 
-    }
-  }
 
-  // fill not jet set entrys
-  for(size_t i = 0; i < n; i++)
-  {
-    for(size_t j = i; j < n; j++)
-    {
-      if (j == i)
-      {
-        distanceMatrix[i][i] = 0;
-      }
-      distanceMatrix[i][j] = distanceMatrix[j][i];
-    }
-  }
-  
-  // output stuff
   for(size_t i = 0; i < n; i++)
   {
     for(size_t j = 0; j < n; j++)
     {
+      auto difference = landscapeV[i] - landscapeV[j];
+      distanceMatrix[i][j] = difference.norm(2);
       matrixFile << distanceMatrix[i][j] << " ";
+      
     }
     matrixFile << "\n";
   }
-  */
-
   
   return 0;
 }

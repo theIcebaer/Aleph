@@ -286,7 +286,7 @@ PersistenceLandscape<T,R,S>::PersistenceLandscape(const PersistenceLandscape& ot
 
 
 template <typename T, typename R, typename S>
-std::pair< std::vector<std::vector<T>>, std::vector<std::vector<R>> >
+std::pair< std::vector<std::vector<T>>, std::vector<std::vector<R>> > __attribute__((optimize("O0")))  
 PersistenceLandscape<T,R,S>::constructPersistenceLandscape (std::deque<Interval<T>> A) 
 {
   size_t k = 0;
@@ -502,9 +502,29 @@ PersistenceLandscape<T,R,S>::PersistenceLandscape(  std::deque<Interval<T>> queu
 
 
 template <typename T, typename R, typename S>
-PersistenceLandscape<T,R,S>::PersistenceLandscape( const aleph::PersistenceDiagram<T>& diag) : 
-  PersistenceLandscape<T,R,S>(diag, std::numeric_limits<T>::min(), std::numeric_limits<T>::max()) 
-{}
+PersistenceLandscape<T,R,S>::PersistenceLandscape( const aleph::PersistenceDiagram<T>& diag)
+{
+  auto max = T(0);
+  for (auto point : diag)
+  {
+    if (point.y() == std::numeric_limits<T>::infinity())
+    {
+      continue;
+    }
+    else if (point.y() > max)
+    {
+      max = point.y();
+    }
+  }
+  if (max == 0)
+  {
+    for (auto point : diag)
+    {
+      max = std::max(max,point.x());
+    }
+  }
+  *this = PersistenceLandscape<T,R,S>(diag, 0, 4*max);
+}
 
 
 template <typename T, typename R, typename S>
@@ -760,15 +780,21 @@ std::ofstream& /*__attribute__((optimize("O0")))*/ operator<< ( std::ofstream& o
   
   os << "# persistence landscape" << std::endl;
   os << "# X Y" << std::endl;
+  //std::cerr << "# persistence landscape" << std::endl;
+  //std::cerr << "# X Y" << std::endl;
   for ( size_t k = 0; k < X.size(); k++ )
   {
     os << "\"layer " << k << ":\"" << std::endl;
+    //std::cerr << "\"layer " << k << ":\"" << std::endl;
     for ( size_t i = 0; i < X[k].size(); i++ )
     {
       os << X[k][i] << " " << Y[k][i] << std::endl;
+      //std::cerr << X[k][i] << " " << Y[k][i] << std::endl;
     }
     os << std::endl;
     os << std::endl;
+    //std::cerr << std::endl;
+    //std::cerr << std::endl;
   }
   
   return os;
